@@ -13,7 +13,34 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
 
+    REDIS_URL: str = "redis://redis:6379/0"
+
+    SESSION_SECRET_KEY: str
+
     FRONTEND_URL: str = "http://localhost:3000"
+
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = (
+        "http://localhost:8000/api/v1/auth/google/callback"
+    )
+    GOOGLE_ALLOWED_DOMAIN: str = "bangunindo.com"
+
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    REFRESH_TOKEN_COOKIE_NAME: str = "refresh_token"
+    REFRESH_TOKEN_COOKIE_SECURE: bool = False
+    REFRESH_TOKEN_COOKIE_SAMESITE: str = "lax"
+
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
 
     PGADMIN_EMAIL: str = "admin@example.com"
     PGADMIN_PASSWORD: str = "admin"

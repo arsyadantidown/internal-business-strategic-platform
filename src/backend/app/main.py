@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.settings import settings
+from app.api.auth.views import router as auth_router
+from app.api.email_verification.views import router as email_verification_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -12,11 +15,28 @@ app = FastAPI(
 )
 
 app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SESSION_SECRET_KEY,
+    same_site="lax",
+    https_only=False,
+)
+
+app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+app.include_router(
+    auth_router,
+    prefix=settings.API_V1_PREFIX,
+)
+
+app.include_router(
+    email_verification_router,
+    prefix=settings.API_V1_PREFIX,
 )
 
 @app.get("/health")
