@@ -67,9 +67,14 @@ const navigationSections: NavigationSection[] = [
     title: 'Administration',
     items: [
       {
+        key: 'content-management',
         label: 'Content Management',
         icon: 'i-lucide-file-text',
-        to: '/admin/content'
+        children: [
+          { label: 'Portfolio Content', to: '/admin/content/portfolio' },
+          { label: 'Partnership Content', to: '/admin/content/partnership' },
+          { label: 'Partnership Workflow', to: '/admin/content/workflow' }
+        ]
       },
       {
         label: 'User Management',
