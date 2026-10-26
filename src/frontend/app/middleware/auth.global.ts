@@ -2,7 +2,11 @@ import { useAuthStore } from '~/modules/auth/stores/auth.store'
 
 export default defineNuxtRouteMiddleware(async (to) => {
   // 1. Lewati eksekusi jika sedang berada di Server (SSR)
-  if (import.meta.server) {
+  // if (import.meta.server) {
+  //   return
+  // }
+  // JIKA 404 (URL tidak ada / slug): LANGSUNG TAMPILKAN 404, JANGAN DITENDANG!
+  if (to.name === 'slug' || to.matched.length === 0) {
     return
   }
 
@@ -43,12 +47,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
     // Skenario B: User SUDAH PUNYA ROLE mencoba buka /landing
     if (hasRole && to.path === '/landing') {
-      return navigateTo('/dashboard', { replace: true, external: true })
+      return navigateTo('/dashboard', { replace: true })
     }
 
     // Skenario C: User BELUM PUNYA ROLE mencoba buka halaman internal selain /landing (misal /dashboard)
     if (!hasRole && to.path !== '/landing') {
-      return navigateTo('/landing', { replace: true, external: true })
+      return navigateTo('/landing', { replace: true })
     }
 
     // Izinkan akses rute yang sesuai
@@ -59,7 +63,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (!authStore.isAuthenticated) {
     // Kalau belum login dan buka halaman internal apa pun (termasuk /landing), tendang ke login
     if (!isAuthPage) {
-      return navigateTo('/login', { replace: true, external: true })
+      return navigateTo('/login', { replace: true })
     }
     // Kalau buka halaman login biasa, izinkan
     return

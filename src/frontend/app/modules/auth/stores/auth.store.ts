@@ -254,7 +254,7 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       clearAuth()
       isLoading.value = false
-      await navigateTo('/login', { replace: true, external: true })
+      await navigateTo('/login', { replace: true })
     }
   }
 
