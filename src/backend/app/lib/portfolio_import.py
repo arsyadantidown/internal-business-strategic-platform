@@ -1,9 +1,14 @@
 import csv
 import re
+
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
-from io import StringIO
+from io import BytesIO, StringIO
 from typing import Any
+from zipfile import BadZipFile
+
+from openpyxl import load_workbook
+from openpyxl.utils.exceptions import InvalidFileException
 
 
 # Kolom yang berasal dari rumus Excel.
@@ -55,7 +60,7 @@ COLUMN_MAP = {
 
 
 # Required fields untuk validasi preview awal.
-# Validasi ke master data/database akan ditambahkan kemudian.
+# Validasi master data/database dilakukan terpisah.
 REQUIRED_FIELDS = {
     "customer_name",
     "project_name",
@@ -88,7 +93,9 @@ def normalize_text(value: Any) -> str | None:
     return " ".join(text.split())
 
 
-def extract_customer_size_code(value: Any) -> str | None:
+def extract_customer_size_code(
+    value: Any,
+) -> str | None:
     """
     Mengambil kode Tier dari Customer Size.
 
@@ -115,12 +122,14 @@ def extract_customer_size_code(value: Any) -> str | None:
     return f"TIER_{match.group(1)}"
 
 
-def split_multi_value(value: Any) -> list[str]:
+def split_multi_value(
+    value: Any,
+) -> list[str]:
     """
     Memisahkan cell multi-value berdasarkan koma.
 
-    Tanda kutip digunakan untuk melindungi koma yang merupakan
-    bagian dari nama item.
+    Tanda kutip digunakan agar koma di dalam nama item
+    tidak dianggap sebagai separator.
 
     Contoh:
     '"Vue.js (Vue, Vue2, Vue3)", Nuxt 3 (JavaScript)'
@@ -146,11 +155,15 @@ def split_multi_value(value: Any) -> list[str]:
     return [
         normalized
         for item in values
-        if (normalized := normalize_text(item)) is not None
+        if (
+            normalized := normalize_text(item)
+        ) is not None
     ]
 
 
-def parse_partner_cell(value: Any) -> list[dict[str, str]]:
+def parse_partner_cell(
+    value: Any,
+) -> list[dict[str, str]]:
     """
     Membaca cell Partner.
 
@@ -158,17 +171,7 @@ def parse_partner_cell(value: Any) -> list[dict[str, str]]:
     Principal: Zabbix SIA,
     Vendor: PT Bangunindo Teknusa
 
-    menjadi:
-    [
-        {
-            "partner_role": "principal",
-            "partner_name": "Zabbix SIA",
-        },
-        {
-            "partner_role": "vendor",
-            "partner_name": "PT Bangunindo Teknusa",
-        },
-    ]
+    menjadi list partner beserta role.
     """
     if value is None:
         return []
@@ -207,7 +210,9 @@ def parse_partner_cell(value: Any) -> list[dict[str, str]]:
 
         result.append(
             {
-                "partner_role": match.group(1).lower(),
+                "partner_role": (
+                    match.group(1).lower()
+                ),
                 "partner_name": partner_name,
             }
         )
@@ -215,7 +220,9 @@ def parse_partner_cell(value: Any) -> list[dict[str, str]]:
     return result
 
 
-def normalize_excel_date(value: Any):
+def normalize_excel_date(
+    value: Any,
+):
     """
     Mengubah datetime hasil pembacaan Excel menjadi date.
     """
@@ -225,34 +232,47 @@ def normalize_excel_date(value: Any):
     return value
 
 
-def normalize_year(value: Any):
+def normalize_year(
+    value: Any,
+):
     """
     Excel dapat membaca tahun sebagai float,
     misalnya 2026.0.
 
     Fungsi ini mengubahnya menjadi integer 2026.
     """
-    if isinstance(value, float) and value.is_integer():
+    if (
+        isinstance(value, float)
+        and value.is_integer()
+    ):
         return int(value)
 
     return value
 
 
-def normalize_decimal(value: Any) -> Decimal | None:
+def normalize_decimal(
+    value: Any,
+) -> Decimal | None:
     """
     Mengubah nilai financial menjadi Decimal.
 
-    Cell kosong akan dikembalikan sebagai None.
+    Cell kosong dikembalikan sebagai None.
     """
     if value is None:
         return None
 
-    if isinstance(value, str) and not value.strip():
+    if (
+        isinstance(value, str)
+        and not value.strip()
+    ):
         return None
 
     try:
         return Decimal(str(value))
-    except (InvalidOperation, ValueError):
+    except (
+        InvalidOperation,
+        ValueError,
+    ):
         return None
 
 
@@ -269,19 +289,26 @@ def parse_portfolio_row(
     """
     data: dict[str, Any] = {}
 
-    for header, value in zip(headers, row):
-        normalized_header = normalize_text(header)
+    for header, value in zip(
+        headers,
+        row,
+    ):
+        normalized_header = normalize_text(
+            header
+        )
 
         if normalized_header is None:
             continue
 
-        # Jangan ambil kolom formula Excel.
+        # Kolom formula Excel tidak digunakan.
         if normalized_header in CALCULATED_HEADERS:
             continue
 
-        field_name = COLUMN_MAP.get(normalized_header)
+        field_name = COLUMN_MAP.get(
+            normalized_header
+        )
 
-        # Header yang tidak dikenal sementara diabaikan.
+        # Header yang belum dikenal sementara diabaikan.
         if field_name is None:
             continue
 
@@ -308,10 +335,17 @@ def parse_portfolio_row(
 
     for field in text_fields:
         if field in data:
-            data[field] = normalize_text(data[field])
+            data[field] = normalize_text(
+                data[field]
+            )
 
-    data["customer_size_code"] = extract_customer_size_code(
-        data.pop("customer_size", None)
+    data["customer_size_code"] = (
+        extract_customer_size_code(
+            data.pop(
+                "customer_size",
+                None,
+            )
+        )
     )
 
     data["year"] = normalize_year(
@@ -362,48 +396,58 @@ def parse_portfolio_row(
         data.get("partners")
     )
 
-    # Menyimpan nomor baris Excel asli agar error preview
-    # dapat menunjuk baris yang bermasalah.
+    # Nomor baris Excel asli untuk error preview.
     data["source_row"] = row_number
 
     return data
 
 
-def validate_portfolio_row(data: dict) -> list[dict[str, str]]:
+def validate_portfolio_row(
+    data: dict,
+) -> list[dict[str, str]]:
     """
     Melakukan validasi dasar satu baris hasil parsing Excel.
 
-    Validasi ini belum melakukan query ke database.
+    Belum melakukan query ke database.
     """
     errors: list[dict[str, str]] = []
 
-    # Required field validation.
     for field in REQUIRED_FIELDS:
         value = data.get(field)
 
-        if value is None or value == "":
+        if (
+            value is None
+            or value == ""
+        ):
             errors.append(
                 {
                     "field": field,
                     "code": "REQUIRED_FIELD",
-                    "message": f"{field} wajib diisi",
+                    "message": (
+                        f"{field} wajib diisi"
+                    ),
                 }
             )
 
-    # Year harus integer.
     year = data.get("year")
 
-    if year is not None and not isinstance(year, int):
+    if (
+        year is not None
+        and not isinstance(year, int)
+    ):
         errors.append(
             {
                 "field": "year",
                 "code": "INVALID_YEAR",
-                "message": "year harus berupa angka tahun",
+                "message": (
+                    "year harus berupa angka tahun"
+                ),
             }
         )
 
-    # Nilai project tidak boleh negatif.
-    value_before_tax = data.get("value_before_tax")
+    value_before_tax = data.get(
+        "value_before_tax"
+    )
 
     if (
         value_before_tax is not None
@@ -413,33 +457,55 @@ def validate_portfolio_row(data: dict) -> list[dict[str, str]]:
             {
                 "field": "value_before_tax",
                 "code": "INVALID_VALUE",
-                "message": "value_before_tax tidak boleh negatif",
+                "message": (
+                    "value_before_tax "
+                    "tidak boleh negatif"
+                ),
             }
         )
 
-    start_date = data.get("start_date")
-    end_date = data.get("end_date")
+    start_date = data.get(
+        "start_date"
+    )
 
-    # Validasi tipe tanggal.
-    if start_date is not None and not isinstance(start_date, date):
+    end_date = data.get(
+        "end_date"
+    )
+
+    if (
+        start_date is not None
+        and not isinstance(
+            start_date,
+            date,
+        )
+    ):
         errors.append(
             {
                 "field": "start_date",
                 "code": "INVALID_DATE",
-                "message": "start_date tidak valid",
+                "message": (
+                    "start_date tidak valid"
+                ),
             }
         )
 
-    if end_date is not None and not isinstance(end_date, date):
+    if (
+        end_date is not None
+        and not isinstance(
+            end_date,
+            date,
+        )
+    ):
         errors.append(
             {
                 "field": "end_date",
                 "code": "INVALID_DATE",
-                "message": "end_date tidak valid",
+                "message": (
+                    "end_date tidak valid"
+                ),
             }
         )
 
-    # End date harus setelah start date.
     if (
         isinstance(start_date, date)
         and isinstance(end_date, date)
@@ -449,7 +515,10 @@ def validate_portfolio_row(data: dict) -> list[dict[str, str]]:
             {
                 "field": "end_date",
                 "code": "INVALID_DATE_RANGE",
-                "message": "end_date harus setelah start_date",
+                "message": (
+                    "end_date harus setelah "
+                    "start_date"
+                ),
             }
         )
 
@@ -465,9 +534,11 @@ def validate_import_rows(
     Project ID yang muncul lebih dari sekali dalam file
     ditandai error tanpa membedakan huruf besar/kecil.
     """
-    project_code_rows: dict[str, list[int]] = {}
+    project_code_rows: dict[
+        str,
+        list[int],
+    ] = {}
 
-    # Cari seluruh kemunculan Project ID.
     for index, row in enumerate(rows):
         project_code = normalize_text(
             row.get("project_code")
@@ -483,33 +554,40 @@ def validate_import_rows(
             [],
         ).append(index)
 
-    # Kumpulkan index row yang duplicate.
     duplicate_indexes: set[int] = set()
 
-    for indexes in project_code_rows.values():
+    for indexes in (
+        project_code_rows.values()
+    ):
         if len(indexes) > 1:
-            duplicate_indexes.update(indexes)
+            duplicate_indexes.update(
+                indexes
+            )
 
     preview_rows = []
 
     valid_rows = 0
     invalid_rows = 0
 
-    # Validasi setiap row.
     for index, row in enumerate(rows):
-        errors = validate_portfolio_row(row)
+        errors = validate_portfolio_row(
+            row
+        )
 
-        warnings: list[dict[str, str]] = []
+        warnings: list[
+            dict[str, str]
+        ] = []
 
-        # Duplicate Project ID di file.
         if index in duplicate_indexes:
             errors.append(
                 {
                     "field": "project_code",
-                    "code": "DUPLICATE_PROJECT_CODE",
+                    "code": (
+                        "DUPLICATE_PROJECT_CODE"
+                    ),
                     "message": (
-                        "Project ID muncul lebih dari sekali "
-                        "di file"
+                        "Project ID muncul lebih "
+                        "dari sekali di file"
                     ),
                 }
             )
@@ -523,7 +601,9 @@ def validate_import_rows(
 
         preview_rows.append(
             {
-                "row": row.get("source_row"),
+                "row": row.get(
+                    "source_row"
+                ),
                 "valid": is_valid,
                 "data": row,
                 "errors": errors,
@@ -537,3 +617,116 @@ def validate_import_rows(
         "invalid_rows": invalid_rows,
         "rows": preview_rows,
     }
+
+
+def is_empty_excel_row(
+    row: tuple[Any, ...],
+) -> bool:
+    """
+    Mengecek apakah seluruh cell dalam satu baris Excel kosong.
+
+    Ini penting karena workbook dapat memiliki max_row besar
+    hanya karena formatting.
+    """
+    return all(
+        normalize_text(value) is None
+        for value in row
+    )
+
+
+def read_portfolio_workbook(
+    file_content: bytes,
+    sheet_name: str = "Sheet1",
+) -> dict:
+    """
+    Membaca workbook Portfolio dari file .xlsx.
+
+    Aturan:
+    - Sheet utama: Sheet1
+    - Header: baris 2
+    - Data: mulai baris 3
+    - Baris kosong diabaikan
+    - Setiap row diparse dengan parse_portfolio_row()
+    - Hasil akhir divalidasi untuk preview
+    """
+    try:
+        workbook = load_workbook(
+            filename=BytesIO(
+                file_content
+            ),
+            read_only=True,
+            data_only=False,
+        )
+
+    except (
+        InvalidFileException,
+        BadZipFile,
+        OSError,
+        ValueError,
+    ) as exc:
+        raise ValueError(
+            "File Excel tidak valid "
+            "atau tidak dapat dibaca"
+        ) from exc
+
+    if (
+        sheet_name
+        not in workbook.sheetnames
+    ):
+        workbook.close()
+
+        raise ValueError(
+            f"Sheet '{sheet_name}' "
+            "tidak ditemukan"
+        )
+
+    worksheet = workbook[
+        sheet_name
+    ]
+
+    # Header berada di baris 2.
+    headers = [
+        cell.value
+        for cell in worksheet[2]
+    ]
+
+    if not any(
+        normalize_text(header)
+        for header in headers
+    ):
+        workbook.close()
+
+        raise ValueError(
+            "Header Excel pada baris 2 "
+            "tidak ditemukan"
+        )
+
+    rows = []
+
+    # Data dimulai dari baris 3.
+    for row_number, row in enumerate(
+        worksheet.iter_rows(
+            min_row=3,
+            max_col=len(headers),
+            values_only=True,
+        ),
+        start=3,
+    ):
+        if is_empty_excel_row(row):
+            continue
+
+        parsed_row = parse_portfolio_row(
+            headers=headers,
+            row=list(row),
+            row_number=row_number,
+        )
+
+        rows.append(
+            parsed_row
+        )
+
+    workbook.close()
+
+    return validate_import_rows(
+        rows
+    )

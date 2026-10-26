@@ -1,5 +1,9 @@
 from datetime import date, datetime
 from decimal import Decimal
+from io import BytesIO
+
+import pytest
+from openpyxl import Workbook
 
 from app.lib.portfolio_import import (
     extract_customer_size_code,
@@ -7,6 +11,7 @@ from app.lib.portfolio_import import (
     normalize_text,
     parse_partner_cell,
     parse_portfolio_row,
+    read_portfolio_workbook,
     split_multi_value,
     validate_import_rows,
     validate_portfolio_row,
@@ -233,8 +238,7 @@ def make_valid_row(
     source_row=3,
 ):
     """
-    Helper untuk membuat row valid yang dipakai
-    oleh beberapa validation test.
+    Helper untuk membuat row valid.
     """
     return {
         "customer_name": "PT Test Customer",
@@ -330,3 +334,115 @@ def test_duplicate_project_code_in_file():
         error["code"] == "DUPLICATE_PROJECT_CODE"
         for error in result["rows"][1]["errors"]
     )
+
+
+def test_read_portfolio_workbook():
+    workbook = Workbook()
+
+    worksheet = workbook.active
+    worksheet.title = "Sheet1"
+
+    # Row 1 = nama perspective.
+    worksheet.append(
+        [
+            "Customer Perspective",
+            "Project Perspective",
+        ]
+    )
+
+    # Row 2 = header.
+    worksheet.append(
+        [
+            "Customer",
+            "Project Name",
+            "Year",
+            "Business Unit",
+            "Project ID",
+            "Project Value (before tax)",
+            "Project Status",
+            "Start Date",
+            "End Date",
+        ]
+    )
+
+    # Row 3 = data valid.
+    worksheet.append(
+        [
+            "PT Test Customer",
+            "Project Test",
+            2026,
+            "ITMS",
+            "PRJ-001",
+            100000000,
+            "On Going",
+            datetime(2026, 1, 1),
+            datetime(2026, 12, 31),
+        ]
+    )
+
+    # Blank row harus diabaikan.
+    worksheet.append(
+        [
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        ]
+    )
+
+    file_buffer = BytesIO()
+
+    workbook.save(file_buffer)
+    workbook.close()
+
+    result = read_portfolio_workbook(
+        file_buffer.getvalue()
+    )
+
+    assert result["total_rows"] == 1
+    assert result["valid_rows"] == 1
+    assert result["invalid_rows"] == 0
+
+    assert result["rows"][0]["row"] == 3
+    assert result["rows"][0]["valid"] is True
+
+    assert (
+        result["rows"][0]["data"]["project_code"]
+        == "PRJ-001"
+    )
+
+
+def test_read_portfolio_workbook_missing_sheet():
+    workbook = Workbook()
+
+    worksheet = workbook.active
+    worksheet.title = "WrongSheet"
+
+    file_buffer = BytesIO()
+
+    workbook.save(file_buffer)
+    workbook.close()
+
+    with pytest.raises(
+        ValueError,
+        match="Sheet 'Sheet1' tidak ditemukan",
+    ):
+        read_portfolio_workbook(
+            file_buffer.getvalue()
+        )
+def test_read_portfolio_workbook_invalid_file():
+    with pytest.raises(
+        ValueError,
+        match=(
+            "File Excel tidak valid "
+            "atau tidak dapat dibaca"
+        ),
+    ):
+        read_portfolio_workbook(
+            b"ini bukan file excel"
+        )
