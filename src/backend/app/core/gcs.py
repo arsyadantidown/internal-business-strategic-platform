@@ -26,11 +26,11 @@ class ObjectStorage(Protocol):
 
     async def signed_url(self, key: str, *, filename: str, content_type: str) -> str: ...
 
+    async def preview_url(self, key: str, *, content_type: str) -> str: ...
+
 
 class GCSStorage:
     def __init__(self, bucket_name: str, credentials_file: str = ""):
-        if not bucket_name:
-            raise StorageError("GCS_BUCKET_NAME belum diatur.")
         self._bucket_name = bucket_name
         self._credentials_file = credentials_file
         self._client = None
@@ -38,6 +38,9 @@ class GCSStorage:
     def _bucket(self):
         # Import dan koneksi ditunda sampai benar-benar dipakai, supaya aplikasi (dan test) tetap
         # bisa jalan tanpa kredensial GCS.
+        if not self._bucket_name:
+            raise StorageError("GCS_BUCKET_NAME belum diatur.")
+
         if self._client is None:
             from google.cloud import storage
 
@@ -91,7 +94,28 @@ class GCSStorage:
         except Exception as error:
             logger.exception("Membuat signed URL gagal: %s", key)
             raise StorageError("Membuat link unduhan gagal.") from error
+    async def preview_url(self, key: str, *, content_type: str) -> str:
+        def run():
+            return self._bucket().blob(key).generate_signed_url(
+                version="v4",
+                expiration=timedelta(
+                    seconds=settings.GCS_SIGNED_URL_TTL_SECONDS
+                ),
+                method="GET",
+                response_type=content_type,
+                response_disposition="inline",
+            )
 
+        try:
+            return await asyncio.to_thread(run)
+        except Exception as error:
+            logger.exception(
+                "Membuat signed preview URL gagal: %s",
+                key,
+            )
+            raise StorageError(
+                "Membuat link preview gagal."
+            ) from error
 
 _storage: GCSStorage | None = None
 

@@ -59,7 +59,12 @@ def test_metrics_follow_excel_formulas():
     metrics = calc.project_metrics(
         start_date=date(2026, 1, 1), end_date=date(2026, 1, 11), status_code="ON_GOING", today=date(2026, 1, 6)
     )
-    assert (metrics.total_days, metrics.remaining_days, metrics.progress_percent) == (10, 5, 50.0)
+    assert (
+        metrics.total_days,
+        metrics.elapsed_days,
+        metrics.remaining_days,
+        metrics.progress_percent,
+    ) == (10, 5, 5, 50.0)
     assert metrics.is_overdue is False
 
 
@@ -340,6 +345,250 @@ async def test_put_success_metrics(client, admin, refs):
         {"success_metric_value": "", "success_metric_label": "x"}]}, headers=admin)).status_code == 422
     assert (await client.put(f"{URL}/{pid}/success-metrics", json={"success_metrics": []}, headers=admin)).json()["data"] == []
 
+
+# ───────────────────────── GET detail project / partner ─────────────────────────
+async def test_get_project_detail(client, admin, refs):
+    created = await create(
+        client,
+        admin,
+        project_payload(refs, code="DETAIL_1"),
+    )
+    assert created.status_code == 201, created.text
+    pid = created.json()["data"]["id"]
+
+    response = await client.get(
+        f"{URL}/{pid}",
+        headers=admin,
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+
+    assert data["project_code"] == "DETAIL_1"
+    assert data["customer_name"] == "PT Bank Mandiri"
+    assert data["industry"]["code"] == "GOVERNMENT"
+
+    assert data["total_days"] == 200
+    assert data["elapsed_days"] == 100
+    assert data["remaining_days"] == 100
+    assert data["progress_percent"] == 50.0
+
+    assert "products" in data
+    assert "tech_stacks" in data
+    assert "customer" in data
+    assert "partners" in data
+    assert "success_metrics" in data
+    assert "files" in data
+    assert "financial" in data
+
+
+async def test_get_project_detail_hides_financial(
+    client,
+    admin,
+    engineer,
+    refs,
+):
+    created = await create(
+        client,
+        admin,
+        project_payload(refs, code="DETAIL_NO_FIN"),
+    )
+    pid = created.json()["data"]["id"]
+
+    response = await client.get(
+        f"{URL}/{pid}",
+        headers=engineer,
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+
+    assert not (MONEY_KEYS & set(data))
+    assert data["project_code"] == "DETAIL_NO_FIN"
+
+
+async def test_get_project_detail_file_preview(
+    client,
+    admin,
+    refs,
+):
+    created = await create(
+        client,
+        admin,
+        project_payload(refs, code="DETAIL_FILES"),
+    )
+    pid = created.json()["data"]["id"]
+
+    assert (
+        await upload(
+            client,
+            admin,
+            pid,
+            PNG,
+            "cover.png",
+            "image",
+            "image/png",
+            sort_order="1",
+        )
+    ).status_code == 201
+
+    assert (
+        await upload(
+            client,
+            admin,
+            pid,
+            MP4,
+            "demo.mp4",
+            "video",
+            "video/mp4",
+            sort_order="2",
+        )
+    ).status_code == 201
+
+    assert (
+        await upload(
+            client,
+            admin,
+            pid,
+            PDF,
+            "document.pdf",
+            "document",
+            "application/pdf",
+            sort_order="3",
+        )
+    ).status_code == 201
+
+    response = await client.get(
+        f"{URL}/{pid}",
+        headers=admin,
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+
+    files = {
+        item["file_category"]: item
+        for item in data["files"]
+    }
+
+    assert "file_url" in files["image"]
+    assert "file_url" in files["video"]
+    assert "file_url" not in files["document"]
+
+    assert files["image"]["file_url"].endswith(
+        "?signature=fake-preview"
+    )
+    assert data["cover_image_url"] == files["image"]["file_url"]
+
+
+async def test_get_deleted_project_detail_is_404(
+    client,
+    admin,
+    refs,
+):
+    created = await create(
+        client,
+        admin,
+        project_payload(refs, code="DETAIL_DELETED"),
+    )
+    pid = created.json()["data"]["id"]
+
+    assert (
+        await client.delete(
+            f"{URL}/{pid}",
+            headers=admin,
+        )
+    ).status_code == 200
+
+    response = await client.get(
+        f"{URL}/{pid}",
+        headers=admin,
+    )
+
+    assert response.status_code == 404
+
+
+async def test_get_partner_detail(client, admin, refs):
+    created = await create(
+        client,
+        admin,
+        project_payload(refs, code="PARTNER_DETAIL"),
+    )
+    assert created.status_code == 201, created.text
+
+    partner_id = refs["partners"]["alpha"]
+
+    response = await client.get(
+        f"/api/v1/partners/{partner_id}",
+        headers=admin,
+    )
+
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+
+    assert data["id"] == partner_id
+    assert len(data["projects"]) == 1
+
+    project = data["projects"][0]
+
+    assert project["project_code"] == "PARTNER_DETAIL"
+    assert project["partner_role"] == "principal"
+    assert "value_before_tax" in project
+
+async def test_partner_detail_excludes_deleted_project(
+    client,
+    admin,
+    refs,
+):
+    created = await create(
+        client,
+        admin,
+        project_payload(refs, code="PARTNER_DELETED"),
+    )
+    assert created.status_code == 201, created.text
+
+    pid = created.json()["data"]["id"]
+    partner_id = refs["partners"]["alpha"]
+
+    deleted = await client.delete(
+        f"{URL}/{pid}",
+        headers=admin,
+    )
+    assert deleted.status_code == 200
+
+    response = await client.get(
+        f"/api/v1/partners/{partner_id}",
+        headers=admin,
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["projects"] == []
+
+async def test_get_partner_detail_hides_financial(
+    client,
+    admin,
+    engineer,
+    refs,
+):
+    created = await create(
+        client,
+        admin,
+        project_payload(refs, code="PARTNER_NO_FIN"),
+    )
+    assert created.status_code == 201, created.text
+
+    partner_id = refs["partners"]["alpha"]
+
+    response = await client.get(
+        f"/api/v1/partners/{partner_id}",
+        headers=engineer,
+    )
+
+    assert response.status_code == 200, response.text
+
+    project = response.json()["data"]["projects"][0]
+
+    assert "value_before_tax" not in project
 
 # ───────────────────────── file project (GCS palsu) ─────────────────────────
 PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 64

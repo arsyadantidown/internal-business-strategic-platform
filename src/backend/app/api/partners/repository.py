@@ -5,6 +5,9 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.partner_model import Partner
+from app.api.projects.repository import project_load_options
+from app.models.project_model import Project
+from app.models.project_partner_model import ProjectPartner
 
 class PartnerRepository:
     def __init__(self, db: AsyncSession):
@@ -28,6 +31,25 @@ class PartnerRepository:
             select(Partner).where(Partner.id == partner_id)
         )
         return result.scalar_one_or_none()
+    async def get_projects(self, partner_id: UUID):
+        result = await self.db.execute(
+            select(Project, ProjectPartner)
+            .join(
+                ProjectPartner,
+                ProjectPartner.project_id == Project.id,
+            )
+            .where(
+                ProjectPartner.partner_id == partner_id,
+                Project.deleted_at.is_(None),
+            )
+            .options(*project_load_options())
+            .order_by(
+                Project.updated_at.desc(),
+                Project.id.asc(),
+            )
+        )
+
+        return result.unique().all()
 
     async def get_by_name(self, partner_name: str):
         result = await self.db.execute(

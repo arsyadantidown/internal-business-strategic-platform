@@ -7,6 +7,7 @@ from app.api.auth.permissions import require_permission
 from app.api.partners.repository import PartnerRepository
 from app.api.partners.schema import PartnerCreateRequest, PartnerUpdateRequest
 from app.api.partners.usecase import PartnerUseCase
+from app.api.projects.permissions import FINANCIAL_VIEW, has_permission
 from app.connections.session import get_db
 from app.core.responses import success_response
 from app.models.user_model import User
@@ -40,6 +41,31 @@ async def create_partner(
 ):
     data = await use_case.create_partner(payload)
     return success_response(message="Partner berhasil ditambahkan.", data=data)
+
+@router.get("/{partner_id}")
+async def get_partner_detail(
+    partner_id: UUID,
+    current_user: User = Depends(
+        require_permission("portfolio.view")
+    ),
+    db: AsyncSession = Depends(get_db),
+    use_case: PartnerUseCase = Depends(get_partner_use_case),
+):
+    include_financial = await has_permission(
+        db,
+        current_user,
+        FINANCIAL_VIEW,
+    )
+
+    data = await use_case.get_detail(
+        partner_id,
+        include_financial,
+    )
+
+    return success_response(
+        message="Detail partner berhasil diambil.",
+        data=data,
+    )
 
 @router.patch("/{partner_id}")
 async def update_partner(

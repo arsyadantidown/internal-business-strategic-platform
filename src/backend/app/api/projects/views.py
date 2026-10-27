@@ -107,6 +107,28 @@ async def create_project(
     return success_response(message="Project berhasil ditambahkan.", data=data)
 
 
+@router.get("/{project_id}")
+async def get_project_detail(
+    project_id: UUID,
+    current_user: User = Depends(
+        require_permission("portfolio.view")
+    ),
+    db: AsyncSession = Depends(get_db),
+    storage: ObjectStorage = Depends(get_storage),
+    use_case: ProjectUseCase = Depends(get_project_use_case),
+):
+    data = await use_case.get_detail(
+        project_id,
+        await can_see_financial(db, current_user),
+        storage,
+    )
+
+    return success_response(
+        message="Detail project berhasil diambil.",
+        data=data,
+    )
+
+
 @router.patch("/{project_id}")
 async def update_project(
     project_id: UUID,

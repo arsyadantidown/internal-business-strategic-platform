@@ -88,6 +88,8 @@ class FakeStorage:
 
     async def signed_url(self, key, *, filename, content_type):
         return f"https://storage.example/{key}?signature=fake"
+    async def preview_url(self, key, *, content_type):
+        return f"https://storage.example/{key}?signature=fake-preview"
 
 
 @pytest.fixture(scope="session")

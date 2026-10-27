@@ -26,6 +26,7 @@ def money(value: Decimal) -> Decimal:
 @dataclass(frozen=True)
 class ProjectMetrics:
     total_days: int
+    elapsed_days: int
     remaining_days: int
     progress_percent: float
     is_overdue: bool
@@ -44,16 +45,23 @@ def project_metrics(
     progress       = 1 - remaining / total  = (today - start) / total, dibatasi 0..100%
     """
     total_days = (end_date - start_date).days
-    remaining = (end_date - today).days
 
     if total_days > 0:
-        progress = min(max((today - start_date).days / total_days, 0.0), 1.0)
+        elapsed_days = min(
+            max((today - start_date).days, 0),
+            total_days,
+        )
+        remaining_days = total_days - elapsed_days
+        progress = elapsed_days / total_days
     else:  # data lama dengan satu hari
+        elapsed_days = 0
+        remaining_days = 0
         progress = 1.0 if today >= end_date else 0.0
 
     return ProjectMetrics(
         total_days=total_days,
-        remaining_days=max(remaining, 0),
+        elapsed_days=elapsed_days,
+        remaining_days=remaining_days,
         progress_percent=round(progress * 100, 1),
         # Hanya project yang masih berjalan bisa terlambat.
         is_overdue=status_code == ACTIVE_PROJECT_STATUS_CODE and today > end_date,

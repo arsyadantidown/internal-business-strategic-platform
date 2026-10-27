@@ -223,6 +223,9 @@ def serialize_project(project: Project, today: date, *, include_financial: bool)
         today=today,
     )
 
+    customer = serialize_customer(project)
+    tech_stack = serialize_tech_stack(project)
+
     data = ProjectRead.model_validate(project).model_dump()
     data.update(
         {
@@ -236,6 +239,7 @@ def serialize_project(project: Project, today: date, *, include_financial: bool)
             "start_date": project.start_date,
             "end_date": project.end_date,
             "total_days": metrics.total_days,
+            "elapsed_days": metrics.elapsed_days,
             "remaining_days": metrics.remaining_days,
             "progress_percent": metrics.progress_percent,
             "is_overdue": metrics.is_overdue,
@@ -244,8 +248,25 @@ def serialize_project(project: Project, today: date, *, include_financial: bool)
             "project_background": project.project_background,
             "project_challenges": project.project_challenges,
             "project_solution": project.project_solution,
-            "customer": serialize_customer(project),
-            "tech_stack": serialize_tech_stack(project),
+            "customer_name": (
+                customer["customer_name"]
+                if customer is not None
+                else None
+            ),
+            "industry": (
+                customer["industry"]
+                if customer is not None
+                else None
+            ),
+            "customer": customer,
+            "products": tech_stack["products"],
+            "tech_stacks": {
+                "frontend": tech_stack["frontend"],
+                "backend": tech_stack["backend"],
+                "data_storage": tech_stack["data_storage"],
+            },
+            "tech_stack": tech_stack,
+            "cover_image_url": None,
             "partners": serialize_partners(project),
             "success_metrics": serialize_success_metrics(project),
             "files": serialize_files(project),

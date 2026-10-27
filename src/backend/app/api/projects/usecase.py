@@ -26,6 +26,7 @@ from app.api.projects.serializers import (
     serialize_success_metrics,
     serialize_tech_stack,
 )
+from app.core.gcs import ObjectStorage, StorageError
 from app.models.business_unit_model import BusinessUnit
 from app.models.company_size_model import CompanySize
 from app.models.customer_model import Customer
@@ -200,6 +201,53 @@ class ProjectUseCase:
     async def _detail(self, project_id: UUID, include_financial: bool) -> dict:
         project = await self._get_or_404(project_id)
         return serialize_project(project, calc.today_wib(), include_financial=include_financial)
+    async def get_detail(
+        self,
+        project_id: UUID,
+        include_financial: bool,
+        storage: ObjectStorage,
+    ) -> dict:
+        project = await self._get_or_404(project_id)
+
+        data = serialize_project(
+            project,
+            calc.today_wib(),
+            include_financial=include_financial,
+        )
+
+        files_by_id = {
+            item.id: item
+            for item in project.files
+        }
+
+        for file_data in data["files"]:
+            item = files_by_id[file_data["id"]]
+
+            if item.file_category not in {"image", "video"}:
+                continue
+
+            try:
+                file_data["file_url"] = await storage.preview_url(
+                    item.storage_key,
+                    content_type=item.mime_type,
+                )
+            except StorageError as error:
+                raise HTTPException(502, str(error))
+
+        cover_image = next(
+            (
+                file_data
+                for file_data in data["files"]
+                if file_data["file_category"] == "image"
+                and "file_url" in file_data
+            ),
+            None,
+        )
+
+        if cover_image is not None:
+            data["cover_image_url"] = cover_image["file_url"]
+
+        return data
 
     # ------------------------------------------------------------------ project
     async def list_projects(
