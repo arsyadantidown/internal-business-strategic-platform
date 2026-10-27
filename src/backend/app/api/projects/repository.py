@@ -34,6 +34,80 @@ def project_load_options():
     )
 
 
+def build_project_conditions(
+    *,
+    search: str | None = None,
+    customer_name: str | None = None,
+    customer_location: str | None = None,
+    company_size_id: UUID | None = None,
+    customer_type_id: UUID | None = None,
+    industry_id: UUID | None = None,
+    legal_structure_id: UUID | None = None,
+    tech_stack_id: UUID | None = None,
+    project_status_id: UUID | None = None,
+    business_unit_id: UUID | None = None,
+    year: int | None = None,
+    is_featured: bool | None = None,
+):
+    conditions = [Project.deleted_at.is_(None)]
+
+    if search:
+        pattern = f"%{search.strip()}%"
+        conditions.append(
+            or_(
+                Project.project_name.ilike(pattern),
+                Project.project_code.ilike(pattern),
+                Customer.customer_name.ilike(pattern),
+                Project.contract_number.ilike(pattern),
+            )
+        )
+
+    if customer_name:
+        conditions.append(
+            func.lower(Customer.customer_name)
+            == customer_name.strip().lower()
+        )
+
+    if customer_location:
+        conditions.append(
+            func.lower(Customer.customer_location)
+            == customer_location.strip().lower()
+        )
+
+    if company_size_id is not None:
+        conditions.append(Customer.company_size_id == company_size_id)
+
+    if customer_type_id is not None:
+        conditions.append(Customer.customer_type_id == customer_type_id)
+
+    if industry_id is not None:
+        conditions.append(Customer.industry_id == industry_id)
+
+    if legal_structure_id is not None:
+        conditions.append(Customer.legal_structure_id == legal_structure_id)
+
+    if tech_stack_id is not None:
+        conditions.append(
+            Project.tech_stacks.any(
+                ProjectTechStack.tech_stack_id == tech_stack_id
+            )
+        )
+
+    if project_status_id is not None:
+        conditions.append(Project.project_status_id == project_status_id)
+
+    if business_unit_id is not None:
+        conditions.append(Project.business_unit_id == business_unit_id)
+
+    if year is not None:
+        conditions.append(Project.year == year)
+
+    if is_featured is not None:
+        conditions.append(Project.is_featured == is_featured)
+
+    return conditions
+
+
 class ProjectRepository:
     def __init__(self, db: AsyncSession):
         self.db = db
@@ -68,61 +142,20 @@ class ProjectRepository:
         page_size: int = 12,
         sort: str = "-updated_at",
     ) -> tuple[list[Project], int]:
-        conditions = [Project.deleted_at.is_(None)]
-
-        if search:
-            pattern = f"%{search.strip()}%"
-            conditions.append(
-                or_(
-                    Project.project_name.ilike(pattern),
-                    Project.project_code.ilike(pattern),
-                    Customer.customer_name.ilike(pattern),
-                    Project.contract_number.ilike(pattern),
-                )
-            )
-
-        if customer_name:
-            conditions.append(
-                func.lower(Customer.customer_name)
-                == customer_name.strip().lower()
-            )
-
-        if customer_location:
-            conditions.append(
-                func.lower(Customer.customer_location)
-                == customer_location.strip().lower()
-            )
-
-        if company_size_id is not None:
-            conditions.append(Customer.company_size_id == company_size_id)
-
-        if customer_type_id is not None:
-            conditions.append(Customer.customer_type_id == customer_type_id)
-
-        if industry_id is not None:
-            conditions.append(Customer.industry_id == industry_id)
-
-        if legal_structure_id is not None:
-            conditions.append(Customer.legal_structure_id == legal_structure_id)
-
-        if tech_stack_id is not None:
-            conditions.append(
-                Project.tech_stacks.any(
-                    ProjectTechStack.tech_stack_id == tech_stack_id
-                )
-            )
-
-        if project_status_id is not None:
-            conditions.append(Project.project_status_id == project_status_id)
-
-        if business_unit_id is not None:
-            conditions.append(Project.business_unit_id == business_unit_id)
-
-        if year is not None:
-            conditions.append(Project.year == year)
-
-        if is_featured is not None:
-            conditions.append(Project.is_featured == is_featured)
+        conditions = build_project_conditions(
+            search=search,
+            customer_name=customer_name,
+            customer_location=customer_location,
+            company_size_id=company_size_id,
+            customer_type_id=customer_type_id,
+            industry_id=industry_id,
+            legal_structure_id=legal_structure_id,
+            tech_stack_id=tech_stack_id,
+            project_status_id=project_status_id,
+            business_unit_id=business_unit_id,
+            year=year,
+            is_featured=is_featured,
+        )
 
         net_profit = (
             Project.value_before_tax

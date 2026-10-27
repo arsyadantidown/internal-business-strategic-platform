@@ -24,6 +24,7 @@ from app.api.products.views import router as products_router
 from app.api.tech_stacks.views import router as tech_stacks_router
 from app.api.partners.views import router as partners_router
 from app.api.projects.views import router as projects_router
+from app.api.dashboard.views import router as dashboard_router
 from app.api.project_import.views import (
     router as project_import_router,
 )
@@ -110,6 +111,10 @@ app.include_router(
 )
 app.include_router(
     projects_router,
+    prefix=settings.API_V1_PREFIX,
+)
+app.include_router(
+    dashboard_router,
     prefix=settings.API_V1_PREFIX,
 )
 
