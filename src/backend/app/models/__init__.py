@@ -17,6 +17,14 @@ from app.models.product_status_model import ProductStatus
 from app.models.product_model import Product
 from app.models.tech_stack_model import TechStack
 from app.models.partner_model import Partner
+from app.models.project_model import Project
+from app.models.customer_model import Customer
+from app.models.project_financial_model import ProjectFinancial
+from app.models.project_product_model import ProjectProduct
+from app.models.project_tech_stack_model import ProjectTechStack
+from app.models.project_partner_model import ProjectPartner
+from app.models.project_success_metric_model import ProjectSuccessMetric
+from app.models.project_file_model import ProjectFile
 
 __all__ = [
     "Base",
@@ -38,4 +46,12 @@ __all__ = [
     "Product",
     "TechStack",
     "Partner",
+    "Project",
+    "Customer",
+    "ProjectFinancial",
+    "ProjectProduct",
+    "ProjectTechStack",
+    "ProjectPartner",
+    "ProjectSuccessMetric",
+    "ProjectFile",
 ]
