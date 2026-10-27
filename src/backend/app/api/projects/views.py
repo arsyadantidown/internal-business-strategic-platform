@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth.permissions import require_permission
@@ -43,6 +43,59 @@ async def can_see_financial(db: AsyncSession, user: User) -> bool:
 
 
 # ───────────────────────── project ─────────────────────────
+@router.get("")
+async def list_projects(
+    search: str | None = Query(default=None),
+    customer_name: str | None = Query(default=None),
+    customer_location: str | None = Query(default=None),
+    company_size_id: UUID | None = Query(default=None),
+    customer_type_id: UUID | None = Query(default=None),
+    industry_id: UUID | None = Query(default=None),
+    legal_structure_id: UUID | None = Query(default=None),
+    tech_stack_id: UUID | None = Query(default=None),
+    project_status_id: UUID | None = Query(default=None),
+    business_unit_id: UUID | None = Query(default=None),
+    year: int | None = Query(default=None),
+    is_featured: bool | None = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=12, ge=1, le=100),
+    sort: str = Query(default="-updated_at"),
+    current_user: User = Depends(
+        require_permission("portfolio.view")
+    ),
+    db: AsyncSession = Depends(get_db),
+    use_case: ProjectUseCase = Depends(get_project_use_case),
+):
+    include_financial = await can_see_financial(
+        db,
+        current_user,
+    )
+
+    data = await use_case.list_projects(
+        search=search,
+        customer_name=customer_name,
+        customer_location=customer_location,
+        company_size_id=company_size_id,
+        customer_type_id=customer_type_id,
+        industry_id=industry_id,
+        legal_structure_id=legal_structure_id,
+        tech_stack_id=tech_stack_id,
+        project_status_id=project_status_id,
+        business_unit_id=business_unit_id,
+        year=year,
+        is_featured=is_featured,
+        page=page,
+        page_size=page_size,
+        sort=sort,
+        include_financial=include_financial,
+    )
+
+    return success_response(
+        message="Data project berhasil diambil.",
+        data=data,
+    )
+
+
 @router.post("", status_code=201)
 async def create_project(
     payload: ProjectCreate,

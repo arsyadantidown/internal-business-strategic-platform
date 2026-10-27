@@ -1,12 +1,13 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import asc, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.customer_model import Customer
 from app.models.project_file_model import ProjectFile
+from app.models.project_financial_model import ProjectFinancial
 from app.models.project_model import Project
 from app.models.project_partner_model import ProjectPartner
 from app.models.project_product_model import ProjectProduct
@@ -47,6 +48,141 @@ class ProjectRepository:
             .execution_options(populate_existing=True)
         )
         return result.unique().scalar_one_or_none()
+
+    async def list_projects(
+        self,
+        *,
+        search: str | None = None,
+        customer_name: str | None = None,
+        customer_location: str | None = None,
+        company_size_id: UUID | None = None,
+        customer_type_id: UUID | None = None,
+        industry_id: UUID | None = None,
+        legal_structure_id: UUID | None = None,
+        tech_stack_id: UUID | None = None,
+        project_status_id: UUID | None = None,
+        business_unit_id: UUID | None = None,
+        year: int | None = None,
+        is_featured: bool | None = None,
+        page: int = 1,
+        page_size: int = 12,
+        sort: str = "-updated_at",
+    ) -> tuple[list[Project], int]:
+        conditions = [Project.deleted_at.is_(None)]
+
+        if search:
+            pattern = f"%{search.strip()}%"
+            conditions.append(
+                or_(
+                    Project.project_name.ilike(pattern),
+                    Project.project_code.ilike(pattern),
+                    Customer.customer_name.ilike(pattern),
+                    Project.contract_number.ilike(pattern),
+                )
+            )
+
+        if customer_name:
+            conditions.append(
+                func.lower(Customer.customer_name)
+                == customer_name.strip().lower()
+            )
+
+        if customer_location:
+            conditions.append(
+                func.lower(Customer.customer_location)
+                == customer_location.strip().lower()
+            )
+
+        if company_size_id is not None:
+            conditions.append(Customer.company_size_id == company_size_id)
+
+        if customer_type_id is not None:
+            conditions.append(Customer.customer_type_id == customer_type_id)
+
+        if industry_id is not None:
+            conditions.append(Customer.industry_id == industry_id)
+
+        if legal_structure_id is not None:
+            conditions.append(Customer.legal_structure_id == legal_structure_id)
+
+        if tech_stack_id is not None:
+            conditions.append(
+                Project.tech_stacks.any(
+                    ProjectTechStack.tech_stack_id == tech_stack_id
+                )
+            )
+
+        if project_status_id is not None:
+            conditions.append(Project.project_status_id == project_status_id)
+
+        if business_unit_id is not None:
+            conditions.append(Project.business_unit_id == business_unit_id)
+
+        if year is not None:
+            conditions.append(Project.year == year)
+
+        if is_featured is not None:
+            conditions.append(Project.is_featured == is_featured)
+
+        net_profit = (
+            Project.value_before_tax
+            - func.coalesce(ProjectFinancial.cogs, 0)
+            - func.coalesce(ProjectFinancial.operational_cost, 0)
+        )
+
+        sort_fields = {
+            "updated_at": Project.updated_at,
+            "start_date": Project.start_date,
+            "end_date": Project.end_date,
+            "project_name": Project.project_name,
+            "project_code": Project.project_code,
+            "year": Project.year,
+            "customer_name": Customer.customer_name,
+            "value_before_tax": Project.value_before_tax,
+            "net_profit": net_profit,
+        }
+
+        descending = sort.startswith("-")
+        sort_name = sort[1:] if descending else sort
+        sort_column = sort_fields.get(sort_name, Project.updated_at)
+
+        ordering = desc(sort_column) if descending else asc(sort_column)
+
+        query = (
+            select(Project)
+            .outerjoin(Customer, Customer.project_id == Project.id)
+            .outerjoin(
+                ProjectFinancial,
+                ProjectFinancial.project_id == Project.id,
+            )
+            .where(*conditions)
+            .options(*project_load_options())
+            .order_by(ordering, Project.id.asc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+        count_query = (
+            select(func.count(Project.id))
+            .select_from(Project)
+            .outerjoin(Customer, Customer.project_id == Project.id)
+            .outerjoin(
+                ProjectFinancial,
+                ProjectFinancial.project_id == Project.id,
+            )
+            .where(*conditions)
+        )
+
+        projects = (
+            (await self.db.execute(query))
+            .unique()
+            .scalars()
+            .all()
+        )
+
+        total = (await self.db.execute(count_query)).scalar_one()
+
+        return list(projects), total
 
     async def code_exists(self, project_code: str, exclude_id: UUID | None = None) -> bool:
         query = select(Project.id).where(

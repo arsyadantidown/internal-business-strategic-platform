@@ -22,6 +22,7 @@ from app.api.projects.serializers import (
     serialize_money,
     serialize_partners,
     serialize_project,
+    serialize_project_list_item,
     serialize_success_metrics,
     serialize_tech_stack,
 )
@@ -43,6 +44,23 @@ from app.models.project_tech_stack_model import ProjectTechStack
 from app.models.tech_stack_model import TechStack
 
 CODE_TAKEN = "Project ID (project_code) sudah digunakan oleh project lain."
+
+PROJECT_LIST_SORT_FIELDS = {
+    "updated_at",
+    "start_date",
+    "end_date",
+    "project_name",
+    "project_code",
+    "year",
+    "customer_name",
+    "value_before_tax",
+    "net_profit",
+}
+
+FINANCIAL_SORT_FIELDS = {
+    "value_before_tax",
+    "net_profit",
+}
 
 
 def duplicate_code_error() -> HTTPException:
@@ -184,6 +202,95 @@ class ProjectUseCase:
         return serialize_project(project, calc.today_wib(), include_financial=include_financial)
 
     # ------------------------------------------------------------------ project
+    async def list_projects(
+        self,
+        *,
+        search: str | None = None,
+        customer_name: str | None = None,
+        customer_location: str | None = None,
+        company_size_id: UUID | None = None,
+        customer_type_id: UUID | None = None,
+        industry_id: UUID | None = None,
+        legal_structure_id: UUID | None = None,
+        tech_stack_id: UUID | None = None,
+        project_status_id: UUID | None = None,
+        business_unit_id: UUID | None = None,
+        year: int | None = None,
+        is_featured: bool | None = None,
+        page: int = 1,
+        page_size: int = 12,
+        sort: str = "-updated_at",
+        include_financial: bool = False,
+    ) -> dict:
+        if page < 1:
+            raise HTTPException(422, "page minimal 1.")
+
+        if page_size < 1 or page_size > 100:
+            raise HTTPException(
+                422,
+                "page_size harus antara 1 sampai 100.",
+            )
+
+        sort_name = sort[1:] if sort.startswith("-") else sort
+
+        if sort_name not in PROJECT_LIST_SORT_FIELDS:
+            raise HTTPException(
+                422,
+                "sort tidak valid.",
+            )
+
+        if (
+            sort_name in FINANCIAL_SORT_FIELDS
+            and not include_financial
+        ):
+            raise HTTPException(
+                403,
+                "Tidak memiliki permission untuk sorting data financial.",
+            )
+
+        projects, total = await self.repository.list_projects(
+            search=search,
+            customer_name=customer_name,
+            customer_location=customer_location,
+            company_size_id=company_size_id,
+            customer_type_id=customer_type_id,
+            industry_id=industry_id,
+            legal_structure_id=legal_structure_id,
+            tech_stack_id=tech_stack_id,
+            project_status_id=project_status_id,
+            business_unit_id=business_unit_id,
+            year=year,
+            is_featured=is_featured,
+            page=page,
+            page_size=page_size,
+            sort=sort,
+        )
+
+        today = calc.today_wib()
+
+        items = [
+            serialize_project_list_item(
+                project,
+                today,
+                include_financial=include_financial,
+            )
+            for project in projects
+        ]
+
+        total_pages = (
+            (total + page_size - 1) // page_size
+            if total > 0
+            else 0
+        )
+
+        return {
+            "items": items,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        }
+
     async def create(self, payload: ProjectCreate, user_id: UUID | None, include_financial: bool) -> dict:
         project = await create_project(self.db, payload, created_by=user_id)
         project_id = project.id

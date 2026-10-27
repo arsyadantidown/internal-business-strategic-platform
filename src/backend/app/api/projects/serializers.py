@@ -154,6 +154,66 @@ def serialize_money(project: Project) -> dict:
     }
 
 
+def serialize_project_list_item(
+    project: Project,
+    today: date,
+    *,
+    include_financial: bool,
+    cover_image_url: str | None = None,
+) -> dict:
+    """Bentuk ringkas project untuk Portfolio Directory."""
+    metrics = calc.project_metrics(
+        start_date=project.start_date,
+        end_date=project.end_date,
+        status_code=project.project_status.project_status_code,
+        today=today,
+    )
+
+    customer = serialize_customer(project)
+    tech_stack = serialize_tech_stack(project)
+
+    data = {
+        "id": project.id,
+        "project_code": project.project_code,
+        "project_name": project.project_name,
+        "year": project.year,
+        "project_objective": project.project_objective,
+        "customer_name": (
+            customer["customer_name"]
+            if customer is not None
+            else None
+        ),
+        "industry": (
+            customer["industry"]
+            if customer is not None
+            else None
+        ),
+        "tech_stacks": {
+            "frontend": tech_stack["frontend"],
+            "backend": tech_stack["backend"],
+            "data_storage": tech_stack["data_storage"],
+        },
+        "project_status": ref(
+            project.project_status,
+            "project_status",
+        ),
+        "contract_name": project.contract_name,
+        "contract_number": project.contract_number,
+        "start_date": project.start_date,
+        "end_date": project.end_date,
+        "progress_percent": metrics.progress_percent,
+        "remaining_days": metrics.remaining_days,
+        "is_featured": project.is_featured,
+        "cover_image_url": cover_image_url,
+        "updated_at": project.updated_at,
+    }
+
+    if include_financial:
+        data["value_before_tax"] = project.value_before_tax
+
+    return data
+
+
 def serialize_project(project: Project, today: date, *, include_financial: bool) -> dict:
     """Satu project dengan semua perspektifnya. Angka uang hanya ikut bila include_financial."""
     metrics = calc.project_metrics(
