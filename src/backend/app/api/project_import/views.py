@@ -3,6 +3,7 @@ from fastapi import (
     Depends,
     File,
     HTTPException,
+    Response,
     UploadFile,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,6 +25,32 @@ def get_project_import_use_case(
     db: AsyncSession = Depends(get_db),
 ) -> ProjectImportUseCase:
     return ProjectImportUseCase(db)
+
+
+@router.get("/template")
+def download_project_import_template(
+    _portfolio_user: User = Depends(
+        require_permission("portfolio.manage")
+    ),
+    use_case: ProjectImportUseCase = Depends(
+        get_project_import_use_case
+    ),
+):
+    file_content = use_case.template()
+
+    return Response(
+        content=file_content,
+        media_type=(
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
+        ),
+        headers={
+            "Content-Disposition": (
+                'attachment; filename="'
+                'portfolio_import_template.xlsx"'
+            )
+        },
+    )
 
 
 @router.post("/preview")

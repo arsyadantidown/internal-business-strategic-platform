@@ -3,7 +3,7 @@ from decimal import Decimal
 from io import BytesIO
 
 import pytest
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
 from app.lib.portfolio_import import (
     extract_customer_size_code,
@@ -15,6 +15,7 @@ from app.lib.portfolio_import import (
     split_multi_value,
     validate_import_rows,
     validate_portfolio_row,
+    build_portfolio_import_template,
 )
 
 
@@ -446,3 +447,47 @@ def test_read_portfolio_workbook_invalid_file():
         read_portfolio_workbook(
             b"ini bukan file excel"
         )
+def test_build_portfolio_import_template():
+    file_content = build_portfolio_import_template()
+
+    workbook = load_workbook(
+        BytesIO(file_content),
+        read_only=False,
+    )
+
+    worksheet = workbook["Sheet1"]
+
+    assert (
+        worksheet["A1"].value
+        == "Customer Perspective"
+    )
+    assert (
+        worksheet["I1"].value
+        == "Project Perspective"
+    )
+    assert (
+        worksheet["AC1"].value
+        == "Financial Perspective"
+    )
+    assert (
+        worksheet["AG1"].value
+        == "Tech Stack"
+    )
+    assert (
+        worksheet["AK1"].value
+        == "Partner Perspective"
+    )
+
+    assert worksheet["A2"].value == "No"
+    assert worksheet["B2"].value == "Customer"
+    assert worksheet["O2"].value == "Project ID"
+    assert (
+        worksheet["P2"].value
+        == "Project Value (before tax)"
+    )
+    assert worksheet["AK2"].value == "Partner"
+
+    assert worksheet.max_column == 37
+    assert worksheet.freeze_panes == "A3"
+
+    workbook.close()

@@ -1,13 +1,19 @@
 from fastapi import HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.lib.portfolio_import import read_portfolio_workbook
+from app.lib.portfolio_import import (
+    build_portfolio_import_template,
+    read_portfolio_workbook,
+)
 from app.lib.portfolio_import_master_data import match_master_data
 
 
 class ProjectImportUseCase:
     def __init__(self, db: AsyncSession):
         self.db = db
+
+    def template(self) -> bytes:
+        return build_portfolio_import_template()
 
     async def preview(
         self,

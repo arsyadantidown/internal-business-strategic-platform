@@ -7,7 +7,7 @@ from io import BytesIO, StringIO
 from typing import Any
 from zipfile import BadZipFile
 
-from openpyxl import load_workbook
+from openpyxl import Workbook, load_workbook
 from openpyxl.utils.exceptions import InvalidFileException
 
 
@@ -23,7 +23,45 @@ CALCULATED_HEADERS = {
     "Revenue",
     "Net Profit",
 }
-
+PORTFOLIO_TEMPLATE_HEADERS = [
+    "No",
+    "Customer",
+    "Customer Size",
+    "Revenue/Annual Sales/Annual Budget",
+    "Customer Type",
+    "Industry",
+    "Location",
+    "Legal Structure",
+    "Opportunity",
+    "Project Name",
+    "Year",
+    "Contract/PO Name",
+    "Contract/PO Number",
+    "Business Unit",
+    "Project ID",
+    "Project Value (before tax)",
+    "Project Value (after tax)",
+    "Carry Over Value",
+    "Project Status",
+    "Progress Completion ",
+    "%",
+    "Project Manager",
+    "Account Manager",
+    "Start Date",
+    "End Date",
+    "Total Days",
+    "Remaining Days",
+    "Project Objective",
+    "Revenue",
+    "COGS",
+    "Operational Costs",
+    "Net Profit",
+    "Product Use",
+    "Frontend",
+    "Backend",
+    "Data & Storage",
+    "Partner",
+]
 
 # Mapping header Excel ke nama field internal backend.
 COLUMN_MAP = {
@@ -730,3 +768,36 @@ def read_portfolio_workbook(
     return validate_import_rows(
         rows
     )
+def build_portfolio_import_template() -> bytes:
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Sheet1"
+
+    worksheet["A1"] = "Customer Perspective"
+    worksheet["I1"] = "Project Perspective"
+    worksheet["AC1"] = "Financial Perspective"
+    worksheet["AG1"] = "Tech Stack"
+    worksheet["AK1"] = "Partner Perspective"
+
+    worksheet.merge_cells("A1:H1")
+    worksheet.merge_cells("I1:AB1")
+    worksheet.merge_cells("AC1:AF1")
+    worksheet.merge_cells("AG1:AJ1")
+
+    for column_index, header in enumerate(
+        PORTFOLIO_TEMPLATE_HEADERS,
+        start=1,
+    ):
+        worksheet.cell(
+            row=2,
+            column=column_index,
+            value=header,
+        )
+
+    worksheet.freeze_panes = "A3"
+
+    output = BytesIO()
+    workbook.save(output)
+    workbook.close()
+
+    return output.getvalue()
