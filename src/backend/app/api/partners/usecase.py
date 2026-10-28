@@ -6,6 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from app.api.partners.repository import PartnerRepository
 from app.api.partners.schema import PartnerCreateRequest, PartnerUpdateRequest
 from app.models.partner_model import Partner
+from app.api.projects import calculations as calc
+from app.api.projects.serializers import serialize_project_list_item
 
 def serialize_partner(partner: Partner):
     return {
@@ -44,6 +46,36 @@ class PartnerUseCase:
     async def list_partners(self, search: str | None = None, include_inactive: bool = False):
         partners = await self.repository.get_all(search, include_inactive)
         return [serialize_partner(partner) for partner in partners]
+    async def get_detail(
+        self,
+        partner_id: UUID,
+        include_financial: bool,
+    ):
+        partner = await self._get_or_404(partner_id)
+        rows = await self.repository.get_projects(partner_id)
+
+        today = calc.today_wib()
+
+        projects = []
+
+        for project, link in rows:
+            data = serialize_project_list_item(
+                project,
+                today,
+                include_financial=include_financial,
+            )
+
+            data["partner_role"] = link.partner_role
+            data["partner_contribution"] = link.partner_contribution
+
+            projects.append(data)
+
+        return {
+            "id": partner.id,
+            "partner_name": partner.partner_name,
+            "is_active": partner.is_active,
+            "projects": projects,
+        }
 
     async def create_partner(self, payload: PartnerCreateRequest):
         await self._ensure_unique_name(payload.partner_name)

@@ -77,8 +77,17 @@ class RoleRequestUseCase:
     async def get_my_request(self, user: User):
         return await self.repository.get_latest_by_user(user.id)
 
-    async def get_all_requests(self) -> list[RoleRequest]:
-        return await self.repository.get_all()
+    async def get_all_requests(
+        self,
+        status_filter: str | None = None,
+        page: int = 1,
+        page_size: int = 10,
+    ) -> dict:
+        return await self.repository.get_all(
+            status_filter=status_filter,
+            page=page,
+            page_size=page_size,
+        )
 
     async def review(
         self,
