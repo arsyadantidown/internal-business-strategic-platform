@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import type { UserStats, PendingUserRequest, ActiveUser, UserRole } from '../types/types'
 
 import UsersStatsCards from './UsersStatsCards.vue'
@@ -7,7 +7,10 @@ import PendingRequestsTable from './PendingRequestsTable.vue'
 import ActiveUsersTable from './ActiveUsersTable.vue'
 import AssignRoleModal from './AssignRoleModal.vue'
 
+import { useUserStore } from '../stores/user.store.ts'
+
 const toast = useToast()
+const userStore = useUserStore()
 
 // State Modal Review & Assign Role
 const isAssignModalOpen = ref(false)
@@ -304,6 +307,10 @@ const handleManageUser = (user: ActiveUser) => {
 const handleExport = () => {
   alert('Exporting data users to CSV / Excel...')
 }
+
+onMounted(() => {
+  userStore.fetchManagementStats()
+})
 </script>
 
 <template>
@@ -325,7 +332,7 @@ const handleExport = () => {
     </div>
 
     <!-- 1. Top 4 KPI Cards -->
-    <UsersStatsCards :stats="statsData" />
+    <UsersStatsCards :stats="userStore.stats" :is-loading="userStore.isLoadingStats" />
 
     <!-- 2. Pending Access Requests Table -->
     <PendingRequestsTable :requests="pendingRequests" @review="handleReviewUser" />

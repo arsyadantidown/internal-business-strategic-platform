@@ -41,3 +41,10 @@ export interface UserStats {
   activeUsers: number
   inactiveUsers: number
 }
+
+export interface UserManagementStatsResponse {
+  pending_requests: number
+  total_users: number
+  active_users: number
+  inactive_users: number
+}

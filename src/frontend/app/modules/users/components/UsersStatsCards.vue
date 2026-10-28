@@ -3,8 +3,8 @@ import type { UserStats } from '../types/types'
 
 interface Props {
   stats: UserStats
+  isLoading?: boolean
 }
-
 defineProps<Props>()
 </script>
 

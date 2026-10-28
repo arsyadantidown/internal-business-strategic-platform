@@ -67,8 +67,7 @@ const getRoleBadgeClass = (role?: string) => {
       </div>
 
       <!-- Controls: Search & Date Filter persis gambar -->
-      <div class="flex items-center gap-2.5">
-        <!-- Search Input -->
+      <!-- <div class="flex items-center gap-2.5">
         <div class="relative w-64 sm:w-72">
           <div
             class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400"
@@ -83,7 +82,6 @@ const getRoleBadgeClass = (role?: string) => {
           />
         </div>
 
-        <!-- Filter by Date Button -->
         <button
           type="button"
           class="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 shadow-2xs hover:bg-slate-50 cursor-pointer"
@@ -92,7 +90,7 @@ const getRoleBadgeClass = (role?: string) => {
           <span>Filter by Date</span>
           <UIcon name="i-lucide-chevron-down" class="h-3.5 w-3.5 text-slate-400" />
         </button>
-      </div>
+      </div> -->
     </div>
 
     <!-- 2. Table Data (6 Kolom: Name, Email, Division, Requested Role, Request Date, Status, Actions) -->
