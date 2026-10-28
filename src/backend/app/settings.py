@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -41,6 +42,20 @@ class Settings(BaseSettings):
     SMTP_USERNAME: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM_EMAIL: str = ""
+
+    # Portofolio: PPN untuk "Project Value (after tax)" (Excel: =P3+(P3*11%))
+    PORTFOLIO_VAT_RATE: Decimal = Decimal("0.11")
+
+    # Google Cloud Storage untuk file project (bucket privat, akses lewat signed URL).
+    # GCS_CREDENTIALS_FILE kosong = pakai Application Default Credentials.
+    GCS_BUCKET_NAME: str = ""
+    GCS_CREDENTIALS_FILE: str = ""
+    GCS_SIGNED_URL_TTL_SECONDS: int = 300
+    # Batas ukuran upload per kategori (MB).
+    PROJECT_FILE_MAX_IMAGE_MB: int = 10
+    PROJECT_FILE_MAX_VIDEO_MB: int = 200
+    PROJECT_FILE_MAX_DOCUMENT_MB: int = 25
+    PROJECT_FILE_MAX_CASE_STUDY_MB: int = 50
 
     PGADMIN_EMAIL: str = "admin@example.com"
     PGADMIN_PASSWORD: str = "admin"

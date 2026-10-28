@@ -1,3 +1,4 @@
+from fastapi.encoders import jsonable_encoder
 from fastapi import Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -54,7 +55,8 @@ async def validation_exception_handler(
             "message": "Validasi request gagal",
             "error": {
                 "code": "VALIDATION_ERROR",
-                "details": exc.errors(),
+                # ctx.error bisa berisi ValueError dari validator (model_validator), tidak bisa di-JSON-kan.
+                "details": jsonable_encoder(exc.errors(), custom_encoder={ValueError: str}),
             },
         },
     )
