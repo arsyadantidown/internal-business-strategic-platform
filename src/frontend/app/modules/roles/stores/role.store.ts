@@ -1,13 +1,48 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { roleApi } from '../api/role.api'
-import type { RoleItem, CreateRoleRequestPayload, RoleRequestItem } from '../types/role.types'
+import type {
+  RoleItem,
+  CreateRoleRequestPayload,
+  RoleRequestItem,
+  ApiPagination
+} from '../types/role.types'
 
 export const useRoleStore = defineStore('role', () => {
   const roles = ref<RoleItem[]>([])
   const myRequest = ref<RoleRequestItem | null>(null)
   const isLoading = ref<boolean>(false)
   const isSubmitting = ref<boolean>(false)
+
+  const pendingRequests = ref<RoleRequestItem[]>([])
+  const pendingPagination = ref<ApiPagination>({
+    page: 1,
+    page_size: 10,
+    total: 0,
+    total_pages: 1
+  })
+  const isLoadingPending = ref<boolean>(false)
+
+  const fetchPendingRequests = async (page = 1, pageSize = 10) => {
+    isLoadingPending.value = true
+    try {
+      const res = await roleApi.getRequests({
+        status: 'pending',
+        page,
+        pageSize
+      })
+      if (res.data) {
+        pendingRequests.value = res.data.items || []
+        pendingPagination.value = res.data.pagination
+      }
+      return res.data
+    } catch (err) {
+      console.error('Failed to fetch pending role requests:', err)
+      throw err
+    } finally {
+      isLoadingPending.value = false
+    }
+  }
 
   const fetchRoles = async (force = false) => {
     if (roles.value.length > 0 && !force) return roles.value
@@ -55,6 +90,10 @@ export const useRoleStore = defineStore('role', () => {
     myRequest,
     isSubmitting,
     submitRoleRequest,
-    fetchMyRequest
+    fetchMyRequest,
+    pendingRequests,
+    pendingPagination,
+    isLoadingPending,
+    fetchPendingRequests
   }
 })
