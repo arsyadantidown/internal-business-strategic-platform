@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 
 // Import aset gambar dari assets
 import heroBg from '~/assets/hero-bg.png'
@@ -8,8 +8,6 @@ import portoCard from '~/assets/porto-card.png'
 import partnerCard from '~/assets/partner-card.png'
 import collabCard from '~/assets/collab-card.png'
 import reportCard from '~/assets/report-card.png'
-import requestIllustration from '~/assets/request-role-illustration.png'
-import pendingIllustration from '~/assets/pending-role-illustration.png'
 
 import { useAuthStore } from '~/modules/auth/stores/auth.store'
 import { useRoleStore } from '~/modules/roles/stores/role.store'
@@ -19,8 +17,6 @@ import RoleRequestForm from './request-role/RoleRequestForm.vue'
 import RoleRequestPending from './request-role/RoleRequestPending.vue'
 import RoleRequestRejected from './request-role/RoleRequestRejected.vue'
 
-const { formatDateTime } = useAppDate()
-
 const authStore = useAuthStore()
 const roleStore = useRoleStore()
 const divisionStore = useDivisionStore()
@@ -28,6 +24,11 @@ const divisionStore = useDivisionStore()
 // State Dropdown Profil di Header
 const isProfileDropdownOpen = ref(false)
 const profileDropdownRef = ref<HTMLElement | null>(null)
+
+// Simpan scroll position sebelum user refresh / reload halaman
+const saveScrollPosition = () => {
+  sessionStorage.setItem('landing_scroll_y', window.scrollY.toString())
+}
 
 const toggleProfileDropdown = () => {
   isProfileDropdownOpen.value = !isProfileDropdownOpen.value
@@ -176,6 +177,11 @@ const handleScrollSpy = () => {
 const handleScroll = () => {
   isScrolled.value = window.scrollY > 20
   handleScrollSpy()
+
+  // Simpan posisi scroll realtime
+  if (window.scrollY > 0) {
+    sessionStorage.setItem('landing_scroll_y', window.scrollY.toString())
+  }
 }
 
 const handleReapply = () => {
@@ -206,6 +212,11 @@ const handleSubmitRequest = async (payload: {
 }
 
 onMounted(async () => {
+  // Matikan auto-reset scroll bawaan browser agar tidak konflik
+  if ('scrollRestoration' in history) {
+    history.scrollRestoration = 'manual'
+  }
+
   window.addEventListener('scroll', handleScroll, { passive: true })
   document.addEventListener('click', onDocumentClick)
   handleScroll()
@@ -220,6 +231,20 @@ onMounted(async () => {
     divisionStore.fetchDivisions(),
     roleStore.fetchMyRequest()
   ])
+  // Restore posisi scroll terakhir
+  const savedScrollY = sessionStorage.getItem('landing_scroll_y')
+  if (savedScrollY) {
+    const targetY = parseInt(savedScrollY, 10)
+    await nextTick()
+
+    // Gunakan requestAnimationFrame / timeout kecil agar layout ter-render utuh
+    setTimeout(() => {
+      window.scrollTo({
+        top: targetY,
+        behavior: 'instant'
+      })
+    }, 50)
+  }
 })
 
 onUnmounted(() => {
@@ -227,6 +252,7 @@ onUnmounted(() => {
     cancelAnimationFrame(animationFrameId)
   }
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('beforeunload', saveScrollPosition)
   document.removeEventListener('click', onDocumentClick)
 })
 </script>
