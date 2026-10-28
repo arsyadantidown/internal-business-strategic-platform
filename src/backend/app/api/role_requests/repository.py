@@ -1,7 +1,9 @@
+from math import ceil
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.models.role_request_model import RoleRequest
 from app.models.role_model import Role
@@ -37,11 +39,85 @@ class RoleRequestRepository:
         )
         return list(result.scalars().all())
 
-    async def get_all(self) -> list[RoleRequest]:
-        result = await self.db.execute(
-            select(RoleRequest).order_by(RoleRequest.created_at.desc())
+    async def get_all(
+        self,
+        status_filter: str | None = None,
+        page: int = 1,
+        page_size: int = 10,
+    ) -> dict:
+        requester = aliased(User, name="requester")
+        reviewer = aliased(User, name="reviewer")
+
+        filters = []
+        if status_filter is not None:
+            filters.append(RoleRequest.status == status_filter)
+
+        count_query = (
+            select(func.count(RoleRequest.id))
+            .select_from(RoleRequest)
+            .where(*filters)
         )
-        return list(result.scalars().all())
+        count_result = await self.db.execute(count_query)
+        total = count_result.scalar_one()
+
+        query = (
+            select(
+                RoleRequest,
+                requester.full_name.label("requester_name"),
+                requester.email.label("requester_email"),
+                Role.name.label("role_name"),
+                Division.name.label("division_name"),
+                reviewer.full_name.label("reviewer_name"),
+                reviewer.email.label("reviewer_email"),
+            )
+            .join(requester, requester.id == RoleRequest.user_id)
+            .join(Role, Role.id == RoleRequest.requested_role_id)
+            .join(Division, Division.id == RoleRequest.division_id)
+            .outerjoin(reviewer, reviewer.id == RoleRequest.reviewed_by)
+            .where(*filters)
+            .order_by(
+                RoleRequest.created_at.desc(),
+                RoleRequest.id.desc(),
+            )
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+        result = await self.db.execute(query)
+
+        items = []
+        for row in result.all():
+            request = row[0]
+
+            items.append({
+                "id": request.id,
+                "user_id": request.user_id,
+                "requester_name": row.requester_name,
+                "requester_email": row.requester_email,
+                "requested_role_id": request.requested_role_id,
+                "division_id": request.division_id,
+                "role_name": row.role_name,
+                "division_name": row.division_name,
+                "reason": request.reason,
+                "status": request.status,
+                "reviewed_by": request.reviewed_by,
+                "reviewer_name": row.reviewer_name,
+                "reviewer_email": row.reviewer_email,
+                "reviewed_at": request.reviewed_at,
+                "review_notes": request.review_notes,
+                "created_at": request.created_at,
+                "updated_at": request.updated_at,
+            })
+
+        return {
+            "items": items,
+            "pagination": {
+                "page": page,
+                "page_size": page_size,
+                "total": total,
+                "total_pages": ceil(total / page_size) if total else 0,
+            },
+        }
 
     async def get_active_role(self, role_id: UUID) -> Role | None:
         result = await self.db.execute(
@@ -77,21 +153,24 @@ class RoleRequestRepository:
     async def save(self) -> None:
         await self.db.flush()
 
-    async def get_latest_by_user(self, user_id: UUID):
+    async def get_latest_by_user(self, user_id: UUID) -> dict | None:
+        requester = aliased(User, name="requester")
+        reviewer = aliased(User, name="reviewer")
+
         result = await self.db.execute(
             select(
                 RoleRequest,
+                requester.full_name.label("requester_name"),
+                requester.email.label("requester_email"),
                 Division.name.label("division_name"),
                 Role.name.label("role_name"),
+                reviewer.full_name.label("reviewer_name"),
+                reviewer.email.label("reviewer_email"),
             )
-            .join(
-                Division,
-                Division.id == RoleRequest.division_id,
-            )
-            .join(
-                Role,
-                Role.id == RoleRequest.requested_role_id,
-            )
+            .join(requester, requester.id == RoleRequest.user_id)
+            .join(Division, Division.id == RoleRequest.division_id)
+            .join(Role, Role.id == RoleRequest.requested_role_id)
+            .outerjoin(reviewer, reviewer.id == RoleRequest.reviewed_by)
             .where(RoleRequest.user_id == user_id)
             .order_by(
                 RoleRequest.created_at.desc(),
@@ -104,19 +183,24 @@ class RoleRequestRepository:
         if row is None:
             return None
 
-        request, division_name, role_name = row
+        request = row[0]
+
         return {
             "id": request.id,
             "user_id": request.user_id,
+            "requester_name": row.requester_name,
+            "requester_email": row.requester_email,
             "requested_role_id": request.requested_role_id,
             "division_id": request.division_id,
-            "division_name": division_name,
-            "role_name": role_name,
+            "role_name": row.role_name,
+            "division_name": row.division_name,
             "reason": request.reason,
             "status": request.status,
             "reviewed_by": request.reviewed_by,
             "reviewed_at": request.reviewed_at,
             "review_notes": request.review_notes,
+            "reviewer_name": row.reviewer_name,
+            "reviewer_email": row.reviewer_email,
             "created_at": request.created_at,
             "updated_at": request.updated_at,
         }

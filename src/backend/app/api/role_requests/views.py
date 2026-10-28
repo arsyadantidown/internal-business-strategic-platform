@@ -1,7 +1,8 @@
+from typing import Literal
 from uuid import UUID
-from sqlalchemy import select
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth.dependencies import get_current_user
@@ -9,6 +10,7 @@ from app.api.auth.permissions import require_permission
 from app.api.role_requests.schema import (
     RoleRequestCreate,
     RoleRequestResponse,
+    MyRoleRequestResponse,
     RoleRequestReview,
 )
 from app.api.role_requests.usecase import RoleRequestUseCase
@@ -31,6 +33,11 @@ def success_response(message: str, data):
     }
 
 async def serialize_role_request(db, request):
+    if isinstance(request, dict):
+        return RoleRequestResponse.model_validate(request).model_dump(
+            mode="json"
+        )
+
     role_result = await db.execute(
         select(Role).where(Role.id == request.requested_role_id)
     )
@@ -41,21 +48,43 @@ async def serialize_role_request(db, request):
     )
     division = division_result.scalar_one_or_none()
 
-    return RoleRequestResponse(
-        id=request.id,
-        user_id=request.user_id,
-        requested_role_id=request.requested_role_id,
-        division_id=request.division_id,
-        role_name=role.name if role else "Unknown",
-        division_name=division.name if division else "Unknown",
-        reason=request.reason,
-        status=request.status,
-        reviewed_by=request.reviewed_by,
-        reviewed_at=request.reviewed_at,
-        review_notes=request.review_notes,
-        created_at=request.created_at,
-        updated_at=request.updated_at,
-    ).model_dump(mode="json")
+    requester_result = await db.execute(
+        select(User).where(User.id == request.user_id)
+    )
+    requester = requester_result.scalar_one_or_none()
+
+    reviewer = None
+    if request.reviewed_by is not None:
+        reviewer_result = await db.execute(
+            select(User).where(User.id == request.reviewed_by)
+        )
+        reviewer = reviewer_result.scalar_one_or_none()
+
+    data = {
+        "id": request.id,
+        "user_id": request.user_id,
+        "requester_name": requester.full_name if requester else "Unknown",
+        "requester_email": (
+            requester.email if requester else "unknown@example.com"
+        ),
+        "requested_role_id": request.requested_role_id,
+        "division_id": request.division_id,
+        "role_name": role.name if role else "Unknown",
+        "division_name": division.name if division else "Unknown",
+        "reason": request.reason,
+        "status": request.status,
+        "reviewed_by": request.reviewed_by,
+        "reviewer_name": reviewer.full_name if reviewer else None,
+        "reviewer_email": reviewer.email if reviewer else None,
+        "reviewed_at": request.reviewed_at,
+        "review_notes": request.review_notes,
+        "created_at": request.created_at,
+        "updated_at": request.updated_at,
+    }
+
+    return RoleRequestResponse.model_validate(data).model_dump(
+        mode="json"
+    )
 
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_role_request(
@@ -78,7 +107,9 @@ async def get_my_role_requests(
     request = await RoleRequestUseCase(db).get_my_request(current_user)
 
     data = (
-        await serialize_role_request(db, request)
+        MyRoleRequestResponse.model_validate(request).model_dump(
+            mode="json"
+        )
         if request is not None
         else None
     )
@@ -90,19 +121,35 @@ async def get_my_role_requests(
 
 @router.get("")
 async def get_all_role_requests(
+    status_filter: Literal["pending", "approved", "rejected"] | None = Query(
+        default=None,
+        alias="status",
+    ),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=10, ge=1, le=100),
     current_user: User = Depends(
         require_permission("role_request.review")
     ),
     db: AsyncSession = Depends(get_db),
 ):
-    requests = await RoleRequestUseCase(db).get_all_requests()
+    result = await RoleRequestUseCase(db).get_all_requests(
+        status_filter=status_filter,
+        page=page,
+        page_size=page_size,
+    )
 
     data = [
-        await serialize_role_request(db, item)
-        for item in requests
+        RoleRequestResponse.model_validate(item).model_dump(mode="json")
+        for item in result["items"]
     ]
 
-    return success_response("Daftar pengajuan role berhasil diambil.", data)
+    return success_response(
+        "Daftar pengajuan role berhasil diambil.",
+        {
+            "items": data,
+            "pagination": result["pagination"],
+        },
+    )
 
 @router.patch("/{request_id}/review")
 async def review_role_request(
