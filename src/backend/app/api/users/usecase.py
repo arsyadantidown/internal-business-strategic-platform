@@ -51,6 +51,9 @@ class UserManagementUseCase:
             },
         }
 
+    async def get_management_stats(self) -> dict:
+        return await self.repository.get_management_stats()
+
     async def get_user(self, user_id: UUID):
         row = await self.repository.get_user(user_id)
 
