@@ -27,60 +27,58 @@ const handleReviewRequest = (item: RoleRequestItem) => {
 }
 
 // 2. Saat Admin klik "Approve" pada Modal Review
-const handleApproveUser = (user: RoleRequestItem) => {
-  // Mapping role request ke UserRole sistem untuk tabel Active Users
-  let mappedRole: UserRole = 'Engineer'
-  const reqRole = String(user.requestedRole).toLowerCase()
-  if (reqRole.includes('commercial')) {
-    mappedRole = 'Commercial'
-  } else if (reqRole.includes('executive')) {
-    mappedRole = 'Executive'
+const handleApproveRequest = async (payload: { requestId: string; reviewNotes: string }) => {
+  try {
+    const res = await roleStore.reviewRoleRequest(payload.requestId, {
+      status: 'approved',
+      review_notes: payload.reviewNotes || undefined
+    })
+    toast.add({
+      title: 'Request Approved',
+      description: res.message || 'Role request has been successfully approved.',
+      color: 'success'
+    })
+    isAssignModalOpen.value = false
+    // Refresh KPI Stats & Tabel Pending
+    await Promise.all([
+      userStore.fetchManagementStats(),
+      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10)
+    ])
+  } catch (err: any) {
+    toast.add({
+      title: 'Approval Failed',
+      description: err?.response?.data?.message || err?.message || 'Failed to approve request.',
+      color: 'error'
+    })
   }
-
-  // A. Hapus user dari list pending
-  pendingRequests.value = pendingRequests.value.filter((u) => u.id !== user.id)
-
-  // B. Masukkan ke list Active Users paling atas
-  activeUsers.value.unshift({
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: mappedRole,
-    status: 'Active',
-    assignedDate: 'Just now'
-  })
-
-  // C. Update counter angka KPI
-  statsData.value.pendingRequests--
-  statsData.value.activeUsers++
-
-  toast.add({
-    title: 'Request Approved',
-    description: `${user.name} has been approved as ${mappedRole}.`,
-    color: 'success'
-  })
 }
 
-// 3. Saat Admin klik "Reject" pada Modal Review
-const handleRejectUser = (user: PendingUserRequest) => {
-  // Hapus dari pending requests
-  pendingRequests.value = pendingRequests.value.filter((u) => u.id !== user.id)
-  statsData.value.pendingRequests--
-
-  toast.add({
-    title: 'Request Rejected',
-    description: `Request for ${user.name} has been rejected.`,
-    color: 'error'
-  })
+// Handler saat Admin Reject
+const handleRejectRequest = async (payload: { requestId: string; reviewNotes: string }) => {
+  try {
+    const res = await roleStore.reviewRoleRequest(payload.requestId, {
+      status: 'rejected',
+      review_notes: payload.reviewNotes
+    })
+    toast.add({
+      title: 'Request Rejected',
+      description: res.message || 'Role request has been rejected.',
+      color: 'success'
+    })
+    isAssignModalOpen.value = false
+    // Refresh KPI Stats & Tabel Pending
+    await Promise.all([
+      userStore.fetchManagementStats(),
+      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10)
+    ])
+  } catch (err: any) {
+    toast.add({
+      title: 'Rejection Failed',
+      description: err?.response?.data?.message || err?.message || 'Failed to reject request.',
+      color: 'error'
+    })
+  }
 }
-
-// Data Statistik (4 Top KPI Cards)
-const statsData = ref<UserStats>({
-  pendingRequests: 8,
-  totalUsers: 24,
-  activeUsers: 16,
-  inactiveUsers: 0
-})
 
 // Data Users Internal (16 Active Users)
 const activeUsers = ref<ActiveUser[]>([
@@ -266,6 +264,7 @@ onMounted(() => {
     <AssignRoleModal
       :is-open="isAssignModalOpen"
       :request="selectedRequestForReview"
+      :is-submitting="roleStore.isReviewing"
       @close="isAssignModalOpen = false"
       @approve="handleApproveRequest"
       @reject="handleRejectRequest"

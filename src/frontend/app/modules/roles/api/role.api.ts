@@ -5,7 +5,8 @@ import type {
   CreateRoleRequestPayload,
   RoleRequestItem,
   RoleRequestQueryParams,
-  ApiPagination
+  ApiPagination,
+  ReviewRoleRequestPayload
 } from '../types/role.types'
 
 export const roleApi = {
@@ -44,6 +45,17 @@ export const roleApi = {
     const response = await apiClient.get(ENDPOINTS.ROLES.REQUESTS, {
       params: queryParams
     })
+    return response.data
+  },
+
+  async reviewRequest(
+    requestId: string,
+    payload: ReviewRoleRequestPayload
+  ): Promise<{ success: boolean; message: string; data: RoleRequestItem }> {
+    const response = await apiClient.patch(
+      `${ENDPOINTS.ROLES.REQUESTS}/${requestId}/review`,
+      payload
+    )
     return response.data
   }
 }

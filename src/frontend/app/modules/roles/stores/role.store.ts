@@ -13,6 +13,7 @@ export const useRoleStore = defineStore('role', () => {
   const myRequest = ref<RoleRequestItem | null>(null)
   const isLoading = ref<boolean>(false)
   const isSubmitting = ref<boolean>(false)
+  const isReviewing = ref<boolean>(false)
 
   const pendingRequests = ref<RoleRequestItem[]>([])
   const pendingPagination = ref<ApiPagination>({
@@ -41,6 +42,27 @@ export const useRoleStore = defineStore('role', () => {
       throw err
     } finally {
       isLoadingPending.value = false
+    }
+  }
+
+  const reviewRoleRequest = async (
+    requestId: string,
+    payload: { status: 'approved' | 'rejected'; review_notes?: string }
+  ) => {
+    isReviewing.value = true
+    try {
+      const res = await roleApi.reviewRequest(requestId, payload)
+      // Hapus item yang sudah di-review dari list pending di frontend
+      pendingRequests.value = pendingRequests.value.filter((item) => item.id !== requestId)
+      if (pendingPagination.value.total > 0) {
+        pendingPagination.value.total--
+      }
+      return res
+    } catch (err) {
+      console.error('Failed to review role request:', err)
+      throw err
+    } finally {
+      isReviewing.value = false
     }
   }
 
@@ -94,6 +116,8 @@ export const useRoleStore = defineStore('role', () => {
     pendingRequests,
     pendingPagination,
     isLoadingPending,
-    fetchPendingRequests
+    fetchPendingRequests,
+    isReviewing,
+    reviewRoleRequest
   }
 })

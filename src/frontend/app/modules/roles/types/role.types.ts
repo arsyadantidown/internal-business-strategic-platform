@@ -42,3 +42,8 @@ export interface RoleRequestQueryParams {
   page?: number
   pageSize?: number // di frontend kita pakai camelCase
 }
+
+export interface ReviewRoleRequestPayload {
+  status: 'approved' | 'rejected'
+  review_notes?: string
+}

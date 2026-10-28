@@ -1,20 +1,40 @@
 <script setup lang="ts">
+import { ref, watch } from 'vue'
 import type { RoleRequestItem } from '~/modules/roles/types/role.types'
 
 interface Props {
   isOpen: boolean
   request: RoleRequestItem | null
+  isSubmitting?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isSubmitting: false
+})
 
+// Emit membawa requestId dan isi teks reviewNotes yang diketik admin
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'approve', request: RoleRequestItem): void
-  (e: 'reject', request: RoleRequestItem): void
+  (e: 'approve', payload: { requestId: string; reviewNotes: string }): void
+  (e: 'reject', payload: { requestId: string; reviewNotes: string }): void
 }>()
 
 const { formatDateTime } = useAppDate()
+
+// Inputan textarea yang diketik admin
+const reviewNotes = ref('')
+const notesError = ref('')
+
+// Reset textarea setiap kali modal dibuka
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (open) {
+      reviewNotes.value = ''
+      notesError.value = ''
+    }
+  }
+)
 
 const getRoleBadgeClass = (role?: string) => {
   const r = String(role || '').toLowerCase()
@@ -24,15 +44,25 @@ const getRoleBadgeClass = (role?: string) => {
 }
 
 const handleApprove = () => {
-  if (props.request) {
-    emit('approve', props.request)
-  }
+  if (!props.request) return
+  notesError.value = ''
+  emit('approve', {
+    requestId: props.request.id,
+    reviewNotes: reviewNotes.value.trim()
+  })
 }
 
 const handleReject = () => {
-  if (props.request) {
-    emit('reject', props.request)
+  if (!props.request) return
+  if (!reviewNotes.value.trim()) {
+    notesError.value = 'Please provide a reason for rejecting this request.'
+    return
   }
+  notesError.value = ''
+  emit('reject', {
+    requestId: props.request.id,
+    reviewNotes: reviewNotes.value.trim()
+  })
 }
 </script>
 
@@ -123,6 +153,32 @@ const handleReject = () => {
           >
             {{ request.reason || '-' }}
           </div>
+        </div>
+        <!-- Section 4: Admin Review Notes (Input Form Textarea Admin untuk Body API) -->
+        <div class="rounded-xl border border-slate-100 bg-slate-50/60 p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-xs font-bold text-slate-900">
+              <UIcon name="i-lucide-file-text" class="h-4 w-4 text-blue-600" />
+              <span>Review Notes</span>
+            </div>
+            <span class="text-[11px] text-slate-400">{{ reviewNotes.length }}/500</span>
+          </div>
+          <textarea
+            v-model="reviewNotes"
+            rows="3"
+            maxlength="500"
+            placeholder="Write feedback, approval notes, or reasons for rejection here..."
+            class="w-full rounded-lg border bg-white p-3 text-xs text-slate-800 placeholder-slate-400 outline-none transition-all focus:ring-2 focus:ring-blue-500/20"
+            :class="[
+              notesError
+                ? 'border-rose-400 focus:border-rose-500'
+                : 'border-slate-200 focus:border-blue-500'
+            ]"
+            @input="notesError = ''"
+          />
+          <p v-if="notesError" class="text-[11px] text-rose-500 font-medium">
+            {{ notesError }}
+          </p>
         </div>
       </div>
 
