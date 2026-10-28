@@ -84,3 +84,20 @@ async def preview_project_import(
         message="Preview import portfolio berhasil diproses.",
         data=data,
     )
+
+@router.post("/confirm")
+async def confirm_project_import(
+    file: UploadFile = File(...),
+    current_user: User = Depends(require_permission("portfolio.manage")),
+    _financial_user: User = Depends(require_permission("financial.view")),
+    use_case: ProjectImportUseCase = Depends(get_project_import_use_case),
+):
+    filename = file.filename or ""
+    if not filename.lower().endswith(".xlsx"):
+        raise HTTPException(422, "File harus berformat .xlsx.")
+
+    data = await use_case.confirm(await file.read(), created_by=current_user.id)
+    return success_response(
+        message="Import project berhasil disimpan.",
+        data=data,
+    )

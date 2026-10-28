@@ -154,10 +154,13 @@ def extract_customer_size_code(
         flags=re.IGNORECASE,
     )
 
-    if not match:
-        return None
+    if match:
+        return f"TIER_{int(match.group(1))}"
 
-    return f"TIER_{match.group(1)}"
+    # Accept integral Excel numbers/text; the master lookup decides allowed tiers.
+    if re.fullmatch(r"[0-9]+(?:\.0+)?", text):
+        return f"TIER_{int(Decimal(text))}"
+    return None
 
 
 def split_multi_value(
@@ -290,11 +293,11 @@ def normalize_year(
 
 def normalize_decimal(
     value: Any,
-) -> Decimal | None:
+) -> Decimal | str | None:
     """
     Mengubah nilai financial menjadi Decimal.
 
-    Cell kosong dikembalikan sebagai None.
+    Cell kosong menjadi None; input tidak valid dipertahankan untuk error per baris.
     """
     if value is None:
         return None
@@ -306,12 +309,13 @@ def normalize_decimal(
         return None
 
     try:
-        return Decimal(str(value))
-    except (
-        InvalidOperation,
-        ValueError,
-    ):
-        return None
+        number = Decimal(str(value))
+        if number.is_finite():
+            return number
+    except (InvalidOperation, ValueError):
+        pass
+    # Keep invalid/non-finite input JSON-safe instead of silently defaulting it.
+    return str(value).strip()
 
 
 def parse_portfolio_row(
@@ -377,14 +381,8 @@ def parse_portfolio_row(
                 data[field]
             )
 
-    data["customer_size_code"] = (
-        extract_customer_size_code(
-            data.pop(
-                "customer_size",
-                None,
-            )
-        )
-    )
+    data["customer_size"] = normalize_text(data.get("customer_size"))
+    data["customer_size_code"] = extract_customer_size_code(data["customer_size"])
 
     data["year"] = normalize_year(
         data.get("year")
@@ -467,6 +465,22 @@ def validate_portfolio_row(
                 }
             )
 
+    if data.get("customer_size") and not data.get("customer_size_code"):
+        errors.append({
+            "field": "customer_size",
+            "code": "INVALID_CUSTOMER_SIZE",
+            "message": "Customer Size harus berupa angka Tier bulat atau teks Tier N.",
+        })
+
+    for field in ("value_before_tax", "carry_over_value", "cogs", "operational_cost"):
+        value = data.get(field)
+        if value is not None and not isinstance(value, Decimal):
+            errors.append({
+                "field": field,
+                "code": "INVALID_NUMBER",
+                "message": f"{field} harus berupa angka yang valid.",
+            })
+
     year = data.get("year")
 
     if (
@@ -488,7 +502,8 @@ def validate_portfolio_row(
     )
 
     if (
-        value_before_tax is not None
+        isinstance(value_before_tax, Decimal)
+        and value_before_tax.is_finite()
         and value_before_tax < Decimal("0")
     ):
         errors.append(
