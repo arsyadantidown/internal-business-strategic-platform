@@ -80,151 +80,34 @@ const handleRejectRequest = async (payload: { requestId: string; reviewNotes: st
   }
 }
 
-// Data Users Internal (16 Active Users)
-const activeUsers = ref<ActiveUser[]>([
-  {
-    id: '1',
-    name: 'Rizky Hidayat',
-    email: 'rizky.hidayat@company.com',
-    role: 'Commercial',
-    status: 'Active',
-    assignedDate: 'Jan 15, 2026'
-  },
-  {
-    id: '2',
-    name: 'Jessica Tan',
-    email: 'jessica.tan@company.com',
-    role: 'Engineer',
-    status: 'Active',
-    assignedDate: 'Jan 12, 2026'
-  },
-  {
-    id: '3',
-    name: 'Arief Nugroho',
-    email: 'arief.nugroho@company.com',
-    role: 'Executive',
-    status: 'Active',
-    assignedDate: 'Jan 10, 2026'
-  },
-  {
-    id: '4',
-    name: 'Putri Anggraini',
-    email: 'putri.anggraini@company.com',
-    role: 'Commercial',
-    status: 'Active',
-    assignedDate: 'Jan 8, 2026'
-  },
-  {
-    id: '5',
-    name: 'Dimas Setiawan',
-    email: 'dimas.setiawan@company.com',
-    role: 'Engineer',
-    status: 'Active',
-    assignedDate: 'Jan 5, 2026'
-  },
-  {
-    id: '6',
-    name: 'Bayu Pratama',
-    email: 'bayu.pratama@company.com',
-    role: 'Commercial',
-    status: 'Active',
-    assignedDate: 'Dec 28, 2025'
-  },
-  {
-    id: '7',
-    name: 'Cindy Aurelia',
-    email: 'cindy.aurelia@company.com',
-    role: 'Engineer',
-    status: 'Active',
-    assignedDate: 'Dec 20, 2025'
-  },
-  {
-    id: '8',
-    name: 'Farhan Ramadhan',
-    email: 'farhan.ramadhan@company.com',
-    role: 'Engineer',
-    status: 'Active',
-    assignedDate: 'Dec 15, 2025'
-  },
-  {
-    id: '9',
-    name: 'Gita Permata',
-    email: 'gita.permata@company.com',
-    role: 'Executive',
-    status: 'Active',
-    assignedDate: 'Dec 10, 2025'
-  },
-  {
-    id: '10',
-    name: 'Kevin Sanjaya',
-    email: 'kevin.sanjaya@company.com',
-    role: 'Commercial',
-    status: 'Active',
-    assignedDate: 'Dec 05, 2025'
-  },
-  {
-    id: '11',
-    name: 'Laila Rahmawati',
-    email: 'laila.rahmawati@company.com',
-    role: 'Engineer',
-    status: 'Active',
-    assignedDate: 'Nov 30, 2025'
-  },
-  {
-    id: '12',
-    name: 'Mega Utami',
-    email: 'mega.utami@company.com',
-    role: 'Commercial',
-    status: 'Active',
-    assignedDate: 'Nov 25, 2025'
-  },
-  {
-    id: '13',
-    name: 'Nadia Safitri',
-    email: 'nadia.safitri@company.com',
-    role: 'Engineer',
-    status: 'Active',
-    assignedDate: 'Nov 20, 2025'
-  },
-  {
-    id: '14',
-    name: 'Oki Pratama',
-    email: 'oki.pratama@company.com',
-    role: 'Engineer',
-    status: 'Active',
-    assignedDate: 'Nov 15, 2025'
-  },
-  {
-    id: '15',
-    name: 'Pandu Wicaksono',
-    email: 'pandu.wicaksono@company.com',
-    role: 'Commercial',
-    status: 'Active',
-    assignedDate: 'Nov 10, 2025'
-  },
-  {
-    id: '16',
-    name: 'Roland Brilianto',
-    email: 'roland.brilianto@company.com',
-    role: 'Executive',
-    status: 'Active',
-    assignedDate: 'Nov 01, 2025'
-  }
-])
-
+// Handler saat filter/search/pagination berubah
+const handleUserFilterChange = (filter: {
+  search: string
+  roleId: string
+  isActive: string
+  page: number
+}) => {
+  userStore.fetchUsers({
+    page: filter.page,
+    pageSize: 10,
+    search: filter.search || undefined,
+    // Jangan kirim __NO_ROLE__ ke backend karena butuh UUID
+    roleId: filter.roleId && filter.roleId !== '__NO_ROLE__' ? filter.roleId : undefined,
+    isActive: filter.isActive !== '' ? filter.isActive === 'true' : undefined
+  })
+}
 const handleManageUser = (user: ActiveUser) => {
   alert(`Manage user: ${user.name} (${user.role})`)
 }
 
-const handleExport = () => {
-  alert('Exporting data users to CSV / Excel...')
-}
 const handlePageChange = (page: number) => {
   roleStore.fetchPendingRequests(page, 10)
 }
 onMounted(() => {
   userStore.fetchManagementStats()
   roleStore.fetchPendingRequests(1, 10)
+  roleStore.fetchRoles()
+  userStore.fetchUsers({ page: 1, pageSize: 10 })
 })
 </script>
 
@@ -258,8 +141,14 @@ onMounted(() => {
       @review="handleReviewRequest"
     />
     <!-- 3. Active Users Table -->
-    <ActiveUsersTable :users="activeUsers" @manage-user="handleManageUser" @export="handleExport" />
-
+    <ActiveUsersTable
+      :users="userStore.users"
+      :pagination="userStore.usersPagination"
+      :roles="roleStore.roles"
+      :is-loading="userStore.isLoadingUsers"
+      @filter-change="handleUserFilterChange"
+      @manage-user="handleManageUser"
+    />
     <!-- 4. Modal Popup Review Role Request (Approve & Reject) -->
     <AssignRoleModal
       :is-open="isAssignModalOpen"

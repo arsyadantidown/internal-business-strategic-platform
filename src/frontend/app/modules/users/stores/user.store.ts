@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { userApi } from '../api/user.api'
-import type { UserStats } from '../types/types'
+import type { UserStats, UserItem, UserPaginationMeta, UserQueryParams } from '../types/types'
 
 export const useUserStore = defineStore('user', () => {
   const stats = ref<UserStats>({
@@ -11,6 +11,14 @@ export const useUserStore = defineStore('user', () => {
     inactiveUsers: 0
   })
   const isLoadingStats = ref<boolean>(false)
+  const users = ref<UserItem[]>([])
+  const usersPagination = ref<UserPaginationMeta>({
+    page: 1,
+    page_size: 10,
+    total: 0,
+    total_pages: 1
+  })
+  const isLoadingUsers = ref<boolean>(false)
 
   const fetchManagementStats = async () => {
     isLoadingStats.value = true
@@ -33,9 +41,31 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  const fetchUsers = async (params?: UserQueryParams) => {
+    isLoadingUsers.value = true
+    try {
+      const res = await userApi.getUsers(params)
+      if (res.data) {
+        // Hanya user yang SUDAH memiliki role
+        users.value = res.data || []
+        usersPagination.value = res.meta
+      }
+      return res
+    } catch (err) {
+      console.error('Failed to fetch users:', err)
+      throw err
+    } finally {
+      isLoadingUsers.value = false
+    }
+  }
+
   return {
     stats,
     isLoadingStats,
-    fetchManagementStats
+    fetchManagementStats,
+    users,
+    usersPagination,
+    isLoadingUsers,
+    fetchUsers
   }
 })
