@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-
 interface Props {
   title: string
   description?: string
@@ -14,7 +12,7 @@ withDefaults(defineProps<Props>(), {
   collapsible: false
 })
 
-const isOpen = ref(true)
+const isOpen = defineModel<boolean>('open', { default: true })
 </script>
 
 <template>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
   portfolioBusinessUnitOptions,
   portfolioCompanySizeOptions,
@@ -93,8 +93,13 @@ const sectionLinks = [
   { id: 'financial-information', label: 'Financial Information', icon: 'i-lucide-wallet' },
   { id: 'project-content', label: 'Project Content', icon: 'i-lucide-file-text' },
   { id: 'media-documents', label: 'Media & Documents', icon: 'i-lucide-image' },
-  { id: 'technology-partners', label: 'Technology & Partners', icon: 'i-lucide-cpu' }
+  { id: 'technology', label: 'Technology', icon: 'i-lucide-cpu' },
+  { id: 'partners', label: 'Partners', icon: 'i-lucide-handshake' }
 ]
+
+const openSections = reactive<Record<string, boolean>>(
+  Object.fromEntries(sectionLinks.map(section => [section.id, false]))
+)
 
 const draft = reactive<PortfolioAddDraft>({
   projectName: '',
@@ -163,9 +168,11 @@ const showToast = (
   toast.add({ title, description, color })
 }
 
-const scrollToSection = (id: string) => {
+const scrollToSection = async (id: string) => {
   activeSection.value = id
+  openSections[id] = true
   if (!import.meta.client) return
+  await nextTick()
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
@@ -490,6 +497,7 @@ onBeforeUnmount(() => {
           class="scroll-mt-4"
         >
           <CmsFormSection
+            v-model:open="openSections['project-information']"
             title="Project Information"
             description="Set the core identity, cover image, and discoverability of this case study."
             icon="i-lucide-briefcase"
@@ -646,6 +654,7 @@ onBeforeUnmount(() => {
           class="scroll-mt-4"
         >
           <CmsFormSection
+            v-model:open="openSections['customer-information']"
             title="Customer Information"
             description="Capture the customer profile and organization context."
             icon="i-lucide-building-2"
@@ -779,6 +788,7 @@ onBeforeUnmount(() => {
           class="scroll-mt-4"
         >
           <CmsFormSection
+            v-model:open="openSections['project-details']"
             title="Project Details"
             description="Define the delivery window, owning team, and current project state."
             icon="i-lucide-calendar-range"
@@ -962,6 +972,7 @@ onBeforeUnmount(() => {
           class="scroll-mt-4"
         >
           <CmsFormSection
+            v-model:open="openSections['financial-information']"
             title="Financial Information"
             description="Document commercial value and the financial shape of the engagement."
             icon="i-lucide-wallet"
@@ -1039,6 +1050,7 @@ onBeforeUnmount(() => {
           class="scroll-mt-4"
         >
           <CmsFormSection
+            v-model:open="openSections['project-content']"
             title="Project Content"
             description="Tell the story from business context through measurable outcomes."
             icon="i-lucide-file-text"
@@ -1125,6 +1137,7 @@ onBeforeUnmount(() => {
           class="scroll-mt-4"
         >
           <CmsFormSection
+            v-model:open="openSections['media-documents']"
             title="Media & Documents"
             description="Add visual proof and downloadable materials for the case study."
             icon="i-lucide-image"
@@ -1294,12 +1307,13 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-          id="technology-partners"
+          id="technology"
           class="scroll-mt-4"
         >
           <CmsFormSection
-            title="Technology & Partners"
-            description="Show the delivery stack and the partners involved in the project."
+            v-model:open="openSections['technology']"
+            title="Technology"
+            description="Show the delivery stack used in the project."
             icon="i-lucide-cpu"
             class="shadow-xs"
             collapsible
@@ -1392,7 +1406,21 @@ onBeforeUnmount(() => {
                 </option>
               </select>
             </CmsFormField>
+          </CmsFormSection>
+        </div>
 
+        <div
+          id="partners"
+          class="scroll-mt-4"
+        >
+          <CmsFormSection
+            v-model:open="openSections['partners']"
+            title="Partners"
+            description="List the partners involved in the project."
+            icon="i-lucide-handshake"
+            class="shadow-xs"
+            collapsible
+          >
             <CmsFormField
               label="Related Partners"
               full
