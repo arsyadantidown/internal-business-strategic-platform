@@ -11,6 +11,7 @@ import PartnershipCompanyProfileTab from './tabs/PartnershipCompanyProfileTab.vu
 import PartnershipDetailsTab from './tabs/PartnershipDetailsTab.vue'
 import PartnershipLegalDocumentsTab from './tabs/PartnershipLegalDocumentsTab.vue'
 import PartnershipCollaborationHistoryTab from './tabs/PartnershipCollaborationHistoryTab.vue'
+import PartnershipEnablementTab from './tabs/PartnershipEnablementTab.vue'
 import PartnershipEvaluationTab from './tabs/PartnershipEvaluationTab.vue'
 import PartnershipRelatedPortofolioTab from './tabs/PartnershipRelatedPortofolioTab.vue'
 import PartnershipNotesActivityTab from './tabs/PartnershipNotesActivityTab.vue'
@@ -154,6 +155,8 @@ const handleEditPartner = () => {
       <PartnershipLegalDocumentsTab v-else-if="activeTab === 'legal-documents'" />
 
       <PartnershipCollaborationHistoryTab v-else-if="activeTab === 'collaboration-history'" />
+
+      <PartnershipEnablementTab v-else-if="activeTab === 'enablement'" />
 
       <PartnershipEvaluationTab v-else-if="activeTab === 'evaluation'" />
 

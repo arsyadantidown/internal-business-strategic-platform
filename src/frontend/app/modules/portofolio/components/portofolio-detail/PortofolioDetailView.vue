@@ -31,7 +31,7 @@ const project = ref<ProjectDetailItem>({
   teamSize: '12 members',
   lastUpdated: '2 days ago',
   updatedAt: '2 days ago',
-  status: 'Completed',
+  status: 'Closed',
   industry: 'Banking',
   technologies: ['Vue.js', 'Node.js', 'PostgreSQL', 'AWS'],
   serviceType: 'System Development',

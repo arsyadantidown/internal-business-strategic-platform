@@ -57,6 +57,14 @@ export const portfolioProductOptions: PortfolioOption[] = [
   { label: 'Teslakom', value: 'Teslakom' }
 ]
 
+export const portfolioProductPackageMap: Record<string, string[]> = {
+  Zabbix: ['Zabbix Training', 'Zabbix Professional Services', 'Zabbix Technical Support'],
+  Bliv: ['Bliv Package', 'Bliv Pipeline', 'Bliv Dashboard', 'Bliv AI', 'Bliv Explore', 'Bliv Data House',
+         'Bliv MlOps', 'Bliv Monitoring', 'Bliv Technical Support', 'Bliv Professional Services'],
+  Semeru: ['Semeru ERP', 'Semeru Net'],
+  Teslakom: ['Teslakom SMA-TV']
+}
+
 export const portfolioCustomerTypeOptions: PortfolioOption[] = [
   { label: 'Strategic Customer', value: 'Strategic Customer' },
   { label: 'Regular Customer', value: 'Regular Customer' }

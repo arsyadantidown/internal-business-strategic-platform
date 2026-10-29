@@ -129,20 +129,7 @@ const emit = defineEmits<{
             label="Last Updated"
             :value="formatCmsDateTime(content.updatedAt)"
           />
-          <CmsDetailItem
-            label="Slug"
-            :value="content.slug"
-          />
-          <CmsDetailItem
-            label="SEO Title"
-            :value="content.seoTitle"
-            full
-          />
-          <CmsDetailItem
-            label="SEO Description"
-            :value="content.seoDescription"
-            full
-          />
+
         </CmsDetailSection>
 
         <template v-if="content.kind === 'portfolio'">

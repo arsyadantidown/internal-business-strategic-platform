@@ -11,14 +11,16 @@ import {
   cmsCurrencyOptions,
   cmsCurrentActor,
   cmsFundingTypeOptions,
-  cmsIndustryOptions,
-  cmsProjectStatusOptions,
   cmsProjectTypeOptions,
   cmsRelatedPartnerFilterOptions,
   cmsServiceTypeOptions,
   cmsTechnologyOptions,
   cmsVisibilityFilterOptions
 } from '../../data/cms.data'
+import {
+  portfolioIndustryOptions,
+  portfolioProjectStatusOptions
+} from '~/modules/portofolio/data/portfolioOptions'
 import {
   cmsControlClass,
   cmsControlStateClass,
@@ -68,7 +70,7 @@ const emptyForm = (): PortfolioFormState => ({
   clientLocation: '',
   contactName: '',
   contactEmail: '',
-  projectStatus: 'Planned',
+  projectStatus: 'On Proposal',
   startDate: '',
   endDate: '',
   location: '',
@@ -84,10 +86,7 @@ const emptyForm = (): PortfolioFormState => ({
   documents: [],
   technologies: [],
   partners: [],
-  slug: '',
-  visibility: 'Public',
-  seoTitle: '',
-  seoDescription: '',
+  visibility: 'Internal',
   challengesText: '',
   solutionsText: '',
   documentsText: ''
@@ -140,9 +139,7 @@ const clearError = (field: string) => {
 }
 
 const handleTitleBlur = () => {
-  if (!form.value.slug.trim()) {
-    form.value.slug = slugifyCmsTitle(form.value.title)
-  }
+  // slug removed
 }
 
 const validate = (action: CmsContentSaveAction) => {
@@ -175,9 +172,6 @@ const validate = (action: CmsContentSaveAction) => {
   if (!form.value.author) {
     nextErrors.author = 'Please select an author.'
   }
-  if (!form.value.slug.trim()) {
-    nextErrors.slug = 'Slug is required for published content URLs.'
-  }
   if (action === 'schedule') {
     if (!form.value.scheduledAt) {
       nextErrors.scheduledAt = 'Choose the publication date and time.'
@@ -208,12 +202,9 @@ const handleSubmit = (action: CmsContentSaveAction) => {
     title: values.title.trim(),
     summary: values.summary.trim(),
     client: values.client.trim(),
-    slug: values.slug.trim(),
     challenges: splitCmsLines(challengesText),
     solutions: splitCmsLines(solutionsText),
-    documents: parseCmsDocuments(documentsText),
-    seoTitle: values.seoTitle.trim(),
-    seoDescription: values.seoDescription.trim()
+    documents: parseCmsDocuments(documentsText)
   }, action)
 }
 
@@ -367,7 +358,7 @@ watch(
                   Select industry
                 </option>
                 <option
-                  v-for="option in cmsIndustryOptions"
+                  v-for="option in portfolioIndustryOptions"
                   :key="option.value"
                   :value="option.value"
                 >
@@ -442,7 +433,13 @@ watch(
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
                 <option
-                  v-for="option in cmsIndustryOptions"
+                  value=""
+                  disabled
+                >
+                  Select client industry
+                </option>
+                <option
+                  v-for="option in portfolioIndustryOptions"
                   :key="option.value"
                   :value="option.value"
                 >
@@ -514,7 +511,13 @@ watch(
                 @change="clearError('projectStatus')"
               >
                 <option
-                  v-for="option in cmsProjectStatusOptions"
+                  value=""
+                  disabled
+                >
+                  Select project status
+                </option>
+                <option
+                  v-for="option in portfolioProjectStatusOptions"
                   :key="option.value"
                   :value="option.value"
                 >
@@ -822,12 +825,8 @@ watch(
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
-                <option
-                  v-for="option in cmsVisibilityFilterOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
+                <option value="Internal">
+                  Internal
                 </option>
               </select>
             </CmsFormField>
@@ -859,55 +858,6 @@ watch(
                   {{ option.label }}
                 </option>
               </select>
-            </CmsFormField>
-
-            <CmsFormField
-              label="Slug"
-              html-for="portfolio-slug"
-              required
-              full
-              :error="errors.slug"
-              hint="Used in the public portfolio URL."
-            >
-              <input
-                id="portfolio-slug"
-                v-model="form.slug"
-                type="text"
-                placeholder="digital-banking-transformation"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.slug))]"
-                @input="clearError('slug')"
-              >
-            </CmsFormField>
-
-            <CmsFormField
-              label="SEO Title"
-              html-for="portfolio-seo-title"
-              full
-            >
-              <input
-                id="portfolio-seo-title"
-                v-model="form.seoTitle"
-                type="text"
-                placeholder="Search and social media title"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-            </CmsFormField>
-
-            <CmsFormField
-              label="SEO Description"
-              html-for="portfolio-seo-description"
-              full
-            >
-              <textarea
-                id="portfolio-seo-description"
-                v-model="form.seoDescription"
-                rows="2"
-                placeholder="Short description for search engines"
-                class="py-2"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              />
             </CmsFormField>
           </CmsFormSection>
         </div>

@@ -6,9 +6,9 @@ export type CmsContentSaveAction = 'draft' | 'schedule' | 'publish'
 
 export type CmsWorkflowStage = 'Draft' | 'Verification' | 'Evaluation' | 'Active' | 'Closed'
 
-export type CmsVisibility = 'Public' | 'Internal'
+export type CmsVisibility = 'Internal'
 
-export type CmsProjectStatus = 'Completed' | 'Active' | 'On Going' | 'Planned' | 'Cancelled'
+export type CmsProjectStatus = 'On Going' | 'On Proposal' | 'Closed' | 'Canceled'
 
 export type CmsPartnershipCategory
   = | 'Technology Partner'
@@ -90,10 +90,7 @@ export interface CmsPortfolioContent extends CmsBaseContent {
   documents: CmsDocument[]
   technologies: string[]
   partners: CmsRelatedPartner[]
-  slug: string
   visibility: CmsVisibility
-  seoTitle: string
-  seoDescription: string
 }
 
 export interface CmsPartnershipContent extends CmsBaseContent {
@@ -110,10 +107,7 @@ export interface CmsPartnershipContent extends CmsBaseContent {
   benefits: string[]
   logo: string
   relatedPortfolio: string[]
-  slug: string
   visibility: CmsVisibility
-  seoTitle: string
-  seoDescription: string
 }
 
 export type CmsContent = CmsPortfolioContent | CmsPartnershipContent

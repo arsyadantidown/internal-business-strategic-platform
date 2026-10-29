@@ -11,6 +11,14 @@ import type {
   CmsVisibility,
   CmsWorkflowStage
 } from '../types/cms.types'
+import {
+  portfolioBusinessUnitOptions,
+  portfolioCompanySizeOptions,
+  portfolioCustomerTypeOptions,
+  portfolioIndustryOptions,
+  portfolioLegalStructureOptions,
+  portfolioProjectStatusOptions
+} from '~/modules/portofolio/data/portfolioOptions'
 
 export const cmsCurrentActor = 'Roland Brilianto'
 
@@ -40,11 +48,10 @@ export const cmsWorkflowStages: CmsWorkflowStage[] = [
 ]
 
 export const cmsProjectStatuses: CmsProjectStatus[] = [
-  'Completed',
-  'Active',
   'On Going',
-  'Planned',
-  'Cancelled'
+  'On Proposal',
+  'Closed',
+  'Canceled'
 ]
 
 export const cmsPartnerCategories: CmsPartnershipCategory[] = [
@@ -63,21 +70,7 @@ export const cmsPartnerTypes: CmsPartnerType[] = [
   'Other'
 ]
 
-export const cmsIndustries = [
-  'Banking',
-  'Financial Services',
-  'Manufacturing',
-  'Retail',
-  'Healthcare',
-  'Logistics',
-  'Government',
-  'Technology',
-  'Telecommunications',
-  'Energy & Utilities',
-  'Education',
-  'Property',
-  'Other'
-]
+export const cmsIndustries = portfolioIndustryOptions.map(industry => industry.value)
 
 export const cmsProjectTypes = [
   'Digital Transformation',
@@ -180,7 +173,7 @@ export const cmsRelatedPortfolioOptions = [
   'Legacy System Migration'
 ]
 
-export const cmsVisibilityOptions: CmsVisibility[] = ['Public', 'Internal']
+export const cmsVisibilityOptions: CmsVisibility[] = ['Internal']
 
 export const cmsStatusOptions: CmsFilterOption[] = cmsStatuses.map(status => ({
   label: status,
@@ -197,15 +190,12 @@ export const cmsAuthorOptions: CmsFilterOption[] = cmsAuthors.map(author => ({
   value: author
 }))
 
-export const cmsProjectStatusOptions: CmsFilterOption[] = cmsProjectStatuses.map(status => ({
-  label: status,
-  value: status
+export const cmsProjectStatusOptions: CmsFilterOption[] = portfolioProjectStatusOptions.map(status => ({
+  label: status.label,
+  value: status.value
 }))
 
-export const cmsIndustryOptions: CmsFilterOption[] = cmsIndustries.map(industry => ({
-  label: industry,
-  value: industry
-}))
+export const cmsIndustryOptions: CmsFilterOption[] = portfolioIndustryOptions
 
 export const cmsProjectTypeOptions: CmsFilterOption[] = cmsProjectTypes.map(projectType => ({
   label: projectType,
@@ -296,7 +286,7 @@ const portfolioDefaults: Omit<
   clientLocation: 'Jakarta, Indonesia',
   contactName: '',
   contactEmail: '',
-  projectStatus: 'Planned',
+  projectStatus: 'On Proposal',
   startDate: '',
   endDate: '',
   location: 'Jakarta, Indonesia',
@@ -312,10 +302,7 @@ const portfolioDefaults: Omit<
   documents: [],
   technologies: [],
   partners: [],
-  slug: '',
-  visibility: 'Public',
-  seoTitle: '',
-  seoDescription: ''
+  visibility: 'Internal'
 }
 
 const partnershipDefaults: Omit<
@@ -341,10 +328,7 @@ const partnershipDefaults: Omit<
   benefits: [],
   logo: '',
   relatedPortfolio: [],
-  slug: '',
-  visibility: 'Public',
-  seoTitle: '',
-  seoDescription: ''
+  visibility: 'Internal'
 }
 
 const createPortfolio = (seed: PortfolioSeed): CmsPortfolioContent => ({
@@ -372,12 +356,12 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     updatedAt: '2026-10-25T09:15:00.000Z',
     projectType: 'Digital Transformation',
     serviceType: 'End-to-End Delivery',
-    industry: 'Banking',
+    industry: 'Financial Services',
     clientIndustry: 'Financial Services',
     clientLocation: 'Jakarta, Indonesia',
     contactName: 'Andini Prameswari',
     contactEmail: 'andini.prameswari@abcbank.co.id',
-    projectStatus: 'Completed',
+    projectStatus: 'Closed',
     startDate: '2024-01-15',
     endDate: '2024-12-20',
     location: 'Jakarta, Indonesia',
@@ -413,10 +397,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
       { name: 'SecureNet Cyber', role: 'Security Partner', tag: 'Cybersecurity' },
       { name: 'PT Fintech Solution', role: 'Technology Partner', tag: 'Core System Development' }
     ],
-    slug: 'digital-banking-transformation',
-    visibility: 'Public',
-    seoTitle: 'Digital Banking Transformation Case Study',
-    seoDescription: 'How ABC Bank modernized its digital banking experience with a secure, scalable platform.'
+    visibility: 'Internal'
   }),
   createPortfolio({
     id: 'PF-2026-002',
@@ -434,7 +415,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     clientLocation: 'Bandung, Indonesia',
     contactName: 'Budi Hartono',
     contactEmail: 'budi.hartono@manufaktur.co.id',
-    projectStatus: 'Active',
+    projectStatus: 'On Going',
     startDate: '2025-02-01',
     endDate: '2026-12-31',
     location: 'Bandung, Indonesia',
@@ -468,10 +449,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
       { name: 'Google Cloud', role: 'Cloud Partner', tag: 'IoT Core' },
       { name: 'PT Nusantara Teknologi', role: 'Implementation Partner', tag: 'Field Integration' }
     ],
-    slug: 'smart-manufacturing-platform',
-    visibility: 'Public',
-    seoTitle: 'Smart Manufacturing Platform',
-    seoDescription: 'IoT monitoring and predictive maintenance for manufacturing operations.'
+    visibility: 'Internal'
   }),
   createPortfolio({
     id: 'PF-2026-003',
@@ -485,8 +463,8 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     updatedAt: '2026-10-22T08:30:00.000Z',
     projectType: 'Data & Analytics',
     serviceType: 'Implementation',
-    industry: 'Retail',
-    clientIndustry: 'Retail',
+    industry: 'Retail and Wholesale Trade',
+    clientIndustry: 'Retail and Wholesale Trade',
     clientLocation: 'Jakarta, Indonesia',
     contactName: 'Clara Wijaya',
     contactEmail: 'clara.wijaya@retailgroup.co.id',
@@ -523,10 +501,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
       { name: 'DataSphere Analytics', role: 'Analytics Partner', tag: 'Data Modeling' },
       { name: 'Accenture', role: 'Consulting Partner', tag: 'Business Transformation' }
     ],
-    slug: 'retail-analytics-platform',
-    visibility: 'Public',
-    seoTitle: 'Retail Analytics Platform',
-    seoDescription: 'Unified retail analytics for sales, inventory, and customer insights.'
+    visibility: 'Internal'
   }),
   createPortfolio({
     id: 'PF-2026-004',
@@ -543,7 +518,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     clientLocation: 'Surabaya, Indonesia',
     contactName: 'Dr. Maya Kusuma',
     contactEmail: 'maya.kusuma@medicare.co.id',
-    projectStatus: 'Completed',
+    projectStatus: 'Closed',
     startDate: '2023-03-01',
     endDate: '2024-06-30',
     location: 'Surabaya, Indonesia',
@@ -575,10 +550,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     partners: [
       { name: 'PT SecureTech', role: 'Security Partner', tag: 'Data Privacy' }
     ],
-    slug: 'healthcare-management-system',
-    visibility: 'Internal',
-    seoTitle: 'Healthcare Management System',
-    seoDescription: 'Digital patient management and hospital resource allocation.'
+    visibility: 'Internal'
   }),
   createPortfolio({
     id: 'PF-2026-005',
@@ -590,12 +562,12 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     updatedAt: '2026-10-20T09:10:00.000Z',
     projectType: 'System Development',
     serviceType: 'End-to-End Delivery',
-    industry: 'Logistics',
-    clientIndustry: 'Transportation & Logistics',
+    industry: 'Transportation and Logistics',
+    clientIndustry: 'Transportation and Logistics',
     clientLocation: 'Jakarta, Indonesia',
     contactName: 'Dedi Santoso',
     contactEmail: 'dedi.santoso@logitrans.co.id',
-    projectStatus: 'Active',
+    projectStatus: 'On Going',
     startDate: '2026-04-01',
     endDate: '2027-03-31',
     location: 'Jakarta, Indonesia',
@@ -625,10 +597,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     partners: [
       { name: 'Google Cloud', role: 'Cloud Partner', tag: 'Cloud Hosting' }
     ],
-    slug: 'logistics-tracking-platform',
-    visibility: 'Public',
-    seoTitle: 'Logistics Tracking Platform',
-    seoDescription: 'Real-time shipment tracking and supply chain visibility.'
+    visibility: 'Internal'
   }),
   createPortfolio({
     id: 'PF-2026-006',
@@ -642,7 +611,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     projectType: 'Digital Transformation',
     serviceType: 'Managed Service',
     industry: 'Government',
-    clientIndustry: 'Government & Public Sector',
+    clientIndustry: 'Government',
     clientLocation: 'Jakarta, Indonesia',
     contactName: 'Rina Kartika',
     contactEmail: 'rina.kartika@kemendagri.go.id',
@@ -680,10 +649,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
       { name: 'PT Cloud Indonesia', role: 'Infrastructure Partner', tag: 'Cloud Services' },
       { name: 'PT SecureTech', role: 'Security Partner', tag: 'Security Implementation' }
     ],
-    slug: 'government-service-portal',
-    visibility: 'Public',
-    seoTitle: 'Government Service Portal',
-    seoDescription: 'Digital public service portal for citizens and local government offices.'
+    visibility: 'Internal'
   }),
   createPortfolio({
     id: 'PF-2026-007',
@@ -696,12 +662,12 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     updatedAt: '2026-10-05T10:40:00.000Z',
     projectType: 'Cloud Migration',
     serviceType: 'Consulting',
-    industry: 'Technology',
-    clientIndustry: 'Technology',
+    industry: 'Information Technology (IT) and Software',
+    clientIndustry: 'Information Technology (IT) and Software',
     clientLocation: 'Jakarta, Indonesia',
     contactName: 'Fajar Nugraha',
     contactEmail: 'fajar.nugraha@company.co.id',
-    projectStatus: 'Cancelled',
+    projectStatus: 'Canceled',
     startDate: '2026-01-05',
     endDate: '2026-08-31',
     location: 'Jakarta, Indonesia',
@@ -733,10 +699,7 @@ export const cmsSeedPortfolioContents: CmsPortfolioContent[] = [
     partners: [
       { name: 'Accenture', role: 'Consulting Partner', tag: 'Cloud Strategy' }
     ],
-    slug: 'legacy-system-migration',
-    visibility: 'Internal',
-    seoTitle: 'Legacy System Migration',
-    seoDescription: 'Cloud migration assessment for internal legacy applications.'
+    visibility: 'Internal'
   })
 ]
 
@@ -773,10 +736,7 @@ export const cmsSeedPartnershipContents: CmsPartnershipContent[] = [
     ],
     logo: 'https://images.unsplash.com/photo-1573804633927-bfcbcd909acd?q=80&w=600&auto=format&fit=crop',
     relatedPortfolio: ['Digital Banking Transformation', 'Smart Manufacturing Platform'],
-    slug: 'google-cloud',
-    visibility: 'Public',
-    seoTitle: 'Google Cloud Partnership',
-    seoDescription: 'Strategic cloud partnership for infrastructure, analytics, and AI.'
+    visibility: 'Internal'
   }),
   createPartnership({
     id: 'PT-2026-002',
@@ -809,10 +769,7 @@ export const cmsSeedPartnershipContents: CmsPartnershipContent[] = [
     ],
     logo: 'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop',
     relatedPortfolio: ['Retail Analytics Platform', 'Legacy System Migration'],
-    slug: 'accenture',
-    visibility: 'Public',
-    seoTitle: 'Accenture Partnership',
-    seoDescription: 'Consulting partnership for business transformation and change management.'
+    visibility: 'Internal'
   }),
   createPartnership({
     id: 'PT-2026-003',
@@ -843,10 +800,7 @@ export const cmsSeedPartnershipContents: CmsPartnershipContent[] = [
     ],
     logo: '',
     relatedPortfolio: ['Smart Manufacturing Platform'],
-    slug: 'pt-nusantara-teknologi',
-    visibility: 'Internal',
-    seoTitle: 'PT Nusantara Teknologi Partnership',
-    seoDescription: 'Implementation partnership for IoT and system integration.'
+    visibility: 'Internal'
   }),
   createPartnership({
     id: 'PT-2026-004',
@@ -878,10 +832,7 @@ export const cmsSeedPartnershipContents: CmsPartnershipContent[] = [
     ],
     logo: '',
     relatedPortfolio: ['Logistics Tracking Platform'],
-    slug: 'global-cloud-solutions',
-    visibility: 'Public',
-    seoTitle: 'Global Cloud Solutions Partnership',
-    seoDescription: 'Channel partnership for cloud licensing and resale.'
+    visibility: 'Internal'
   }),
   createPartnership({
     id: 'PT-2026-005',
@@ -913,10 +864,7 @@ export const cmsSeedPartnershipContents: CmsPartnershipContent[] = [
     ],
     logo: '',
     relatedPortfolio: ['Digital Banking Transformation', 'Government Service Portal'],
-    slug: 'securenet-cyber',
-    visibility: 'Public',
-    seoTitle: 'SecureNet Cyber Partnership',
-    seoDescription: 'Cybersecurity partnership for assessment, monitoring, and compliance.'
+    visibility: 'Internal'
   }),
   createPartnership({
     id: 'PT-2026-006',
@@ -947,10 +895,7 @@ export const cmsSeedPartnershipContents: CmsPartnershipContent[] = [
     ],
     logo: '',
     relatedPortfolio: ['Retail Analytics Platform'],
-    slug: 'retailflow-digital',
-    visibility: 'Public',
-    seoTitle: 'RetailFlow Digital Partnership',
-    seoDescription: 'Marketing partnership for retail campaign activation.'
+    visibility: 'Internal'
   }),
   createPartnership({
     id: 'PT-2026-007',
@@ -980,10 +925,7 @@ export const cmsSeedPartnershipContents: CmsPartnershipContent[] = [
     ],
     logo: '',
     relatedPortfolio: [],
-    slug: 'legacycore-systems',
-    visibility: 'Internal',
-    seoTitle: 'LegacyCore Systems Partnership',
-    seoDescription: 'Archived partnership record for legacy application maintenance.'
+    visibility: 'Internal'
   })
 ]
 

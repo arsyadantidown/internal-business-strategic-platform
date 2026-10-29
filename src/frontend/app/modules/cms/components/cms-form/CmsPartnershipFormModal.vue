@@ -10,13 +10,13 @@ import {
   cmsAuthorOptions,
   cmsCurrentActor,
   cmsExpertiseOptions,
-  cmsIndustryOptions,
   cmsLocationOptions,
   cmsPartnerCategoryOptions,
   cmsPartnerTypeOptions,
   cmsRelatedPortfolioFilterOptions,
   cmsVisibilityFilterOptions
 } from '../../data/cms.data'
+import { portfolioIndustryOptions } from '~/modules/portofolio/data/portfolioOptions'
 import {
   cmsControlClass,
   cmsControlStateClass,
@@ -67,10 +67,7 @@ const emptyForm = (): PartnershipFormState => ({
   benefits: [],
   logo: '',
   relatedPortfolio: [],
-  slug: '',
-  visibility: 'Public',
-  seoTitle: '',
-  seoDescription: '',
+  visibility: 'Internal',
   solutionsText: '',
   benefitsText: ''
 })
@@ -110,9 +107,6 @@ const clearError = (field: string) => {
 }
 
 const handleTitleBlur = () => {
-  if (!form.value.slug.trim()) {
-    form.value.slug = slugifyCmsTitle(form.value.title)
-  }
 }
 
 const validate = (action: CmsContentSaveAction) => {
@@ -138,9 +132,6 @@ const validate = (action: CmsContentSaveAction) => {
   }
   if (!form.value.author) {
     nextErrors.author = 'Please select an author.'
-  }
-  if (!form.value.slug.trim()) {
-    nextErrors.slug = 'Slug is required for published content URLs.'
   }
   if (action === 'schedule') {
     if (!form.value.scheduledAt) {
@@ -170,11 +161,8 @@ const handleSubmit = (action: CmsContentSaveAction) => {
     scheduledAt: action === 'schedule' ? values.scheduledAt : '',
     title: values.title.trim(),
     summary: values.summary.trim(),
-    slug: values.slug.trim(),
     solutions: splitCmsLines(solutionsText),
-    benefits: splitCmsLines(benefitsText),
-    seoTitle: values.seoTitle.trim(),
-    seoDescription: values.seoDescription.trim()
+    benefits: splitCmsLines(benefitsText)
   }, action)
 }
 
@@ -229,7 +217,7 @@ watch(
         <div class="max-h-[72vh] space-y-4 overflow-y-auto bg-slate-50/40 px-6 py-5">
           <CmsFormSection
             title="Partner Information"
-            description="Public-facing content only. Legal entity, contacts, contracts, and verification are managed in the Partnership module."
+            description="Internal content visible to authorized team members only. Legal entity, contacts, contracts, and verification are managed in the Partnership module."
             icon="i-lucide-info"
           >
             <CmsFormField
@@ -328,7 +316,7 @@ watch(
                   Select industry
                 </option>
                 <option
-                  v-for="option in cmsIndustryOptions"
+                  v-for="option in portfolioIndustryOptions"
                   :key="option.value"
                   :value="option.value"
                 >
@@ -568,12 +556,8 @@ watch(
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
-                <option
-                  v-for="option in cmsVisibilityFilterOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
+                <option value="Internal">
+                  Internal
                 </option>
               </select>
             </CmsFormField>
@@ -605,55 +589,6 @@ watch(
                   {{ option.label }}
                 </option>
               </select>
-            </CmsFormField>
-
-            <CmsFormField
-              label="Slug"
-              html-for="partnership-slug"
-              required
-              full
-              :error="errors.slug"
-              hint="Used in the public partnership URL."
-            >
-              <input
-                id="partnership-slug"
-                v-model="form.slug"
-                type="text"
-                placeholder="google-cloud"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.slug))]"
-                @input="clearError('slug')"
-              >
-            </CmsFormField>
-
-            <CmsFormField
-              label="SEO Title"
-              html-for="partnership-seo-title"
-              full
-            >
-              <input
-                id="partnership-seo-title"
-                v-model="form.seoTitle"
-                type="text"
-                placeholder="Search and social media title"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-            </CmsFormField>
-
-            <CmsFormField
-              label="SEO Description"
-              html-for="partnership-seo-description"
-              full
-            >
-              <textarea
-                id="partnership-seo-description"
-                v-model="form.seoDescription"
-                rows="2"
-                placeholder="Short description for search engines"
-                class="py-2"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              />
             </CmsFormField>
           </CmsFormSection>
         </div>

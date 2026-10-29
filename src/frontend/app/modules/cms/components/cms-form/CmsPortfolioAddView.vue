@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import {
-  cmsIndustryOptions,
-  cmsProjectStatusOptions,
+  portfolioBusinessUnitOptions,
+  portfolioCompanySizeOptions,
+  portfolioCustomerTypeOptions,
+  portfolioDatabaseOptions,
+  portfolioFrontendStackOptions,
+  portfolioBackendStackOptions,
+  portfolioIndustryOptions,
+  portfolioLegalStructureOptions,
+  portfolioProductOptions,
+  portfolioProductPackageMap,
+  portfolioProductStatusOptions,
+  portfolioProjectStatusOptions
+} from '~/modules/portofolio/data/portfolioOptions'
+import {
   cmsRelatedPartnerFilterOptions,
   cmsTechnologyOptions
 } from '../../data/cms.data'
@@ -38,6 +50,9 @@ interface PortfolioAddDraft {
   timelineEnd: string
   businessUnit: string
   projectStatus: string
+  product: string
+  productPackage: string
+  productStatus: string
   projectValue: string
   revenue: string
   cost: string
@@ -50,8 +65,12 @@ interface PortfolioAddDraft {
   videoUrl: string
   technologies: string[]
   partners: string[]
+  frontendStack: string
+  backendStack: string
+  database: string
   publishStatus: string
   publishDate: string
+  visibility: string
 }
 
 const emit = defineEmits<{
@@ -60,35 +79,10 @@ const emit = defineEmits<{
 
 const toast = useToast()
 
-const companySizeOptions = [
-  { label: 'Enterprise (1,000+ employees)', value: 'Enterprise' },
-  { label: 'Mid-Market (100 - 999 employees)', value: 'Mid-Market' },
-  { label: 'Small Business (10 - 99 employees)', value: 'Small Business' },
-  { label: 'Startup (under 10 employees)', value: 'Startup' }
-]
-
-const legalStructureOptions = [
-  { label: 'Private Limited Company', value: 'Private Limited Company' },
-  { label: 'Public Listed Company', value: 'Public Listed Company' },
-  { label: 'Government Institution', value: 'Government Institution' },
-  { label: 'State-Owned Enterprise', value: 'State-Owned Enterprise' },
-  { label: 'Partnership / Foundation', value: 'Partnership / Foundation' },
-  { label: 'Non-Profit Organization', value: 'Non-Profit Organization' }
-]
-
-const customerTypeOptions = [
-  { label: 'New Customer', value: 'New Customer' },
-  { label: 'Existing Customer', value: 'Existing Customer' },
-  { label: 'Partner Referral', value: 'Partner Referral' }
-]
-
-const businessUnitOptions = [
-  { label: 'Digital Solutions', value: 'Digital Solutions' },
-  { label: 'Data & Analytics', value: 'Data & Analytics' },
-  { label: 'Cloud & Infrastructure', value: 'Cloud & Infrastructure' },
-  { label: 'Enterprise Applications', value: 'Enterprise Applications' },
-  { label: 'Cybersecurity', value: 'Cybersecurity' }
-]
+const companySizeOptions = portfolioCompanySizeOptions
+const legalStructureOptions = portfolioLegalStructureOptions
+const customerTypeOptions = portfolioCustomerTypeOptions
+const businessUnitOptions = portfolioBusinessUnitOptions
 
 const publishStatusOptions = ['Draft', 'Scheduled', 'Published']
 
@@ -115,7 +109,10 @@ const draft = reactive<PortfolioAddDraft>({
   timelineStart: '',
   timelineEnd: '',
   businessUnit: '',
-  projectStatus: 'Active',
+  projectStatus: '',
+  product: '',
+  productPackage: '',
+  productStatus: '',
   projectValue: '',
   revenue: '',
   cost: '',
@@ -128,9 +125,27 @@ const draft = reactive<PortfolioAddDraft>({
   videoUrl: '',
   technologies: [],
   partners: [],
+  frontendStack: '',
+  backendStack: '',
+  database: '',
   publishStatus: 'Draft',
-  publishDate: ''
+  publishDate: '',
+  visibility: 'Internal'
 })
+
+const productPackageOptions = computed(() => {
+  const product = draft.product
+  if (!product) return []
+  const packages = portfolioProductPackageMap[product] || []
+  return packages.map(pkg => ({ label: pkg, value: pkg }))
+})
+
+watch(
+  () => draft.product,
+  () => {
+    draft.productPackage = ''
+  }
+)
 
 const activeSection = ref(sectionLinks[0]?.id ?? 'project-information')
 const newTag = ref('')
@@ -696,7 +711,7 @@ onBeforeUnmount(() => {
                   Select industry
                 </option>
                 <option
-                  v-for="option in cmsIndustryOptions"
+                  v-for="option in portfolioIndustryOptions"
                   :key="option.value"
                   :value="option.value"
                 >
@@ -846,7 +861,92 @@ onBeforeUnmount(() => {
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
                 <option
-                  v-for="option in cmsProjectStatusOptions"
+                  value=""
+                  disabled
+                >
+                  Select project status
+                </option>
+                <option
+                  v-for="option in portfolioProjectStatusOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </CmsFormField>
+
+            <CmsFormField
+              label="Product"
+              html-for="add-portfolio-product"
+            >
+              <select
+                id="add-portfolio-product"
+                v-model="draft.product"
+                class="h-9"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              >
+                <option
+                  value=""
+                  disabled
+                >
+                  Select product
+                </option>
+                <option
+                  v-for="option in portfolioProductOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </CmsFormField>
+
+            <CmsFormField
+              label="Product Package"
+              html-for="add-portfolio-product-package"
+            >
+              <select
+                id="add-portfolio-product-package"
+                v-model="draft.productPackage"
+                class="h-9"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+                :disabled="!draft.product"
+              >
+                <option
+                  value=""
+                  disabled
+                >
+                  {{ draft.product ? 'Select product package' : 'Select product first' }}
+                </option>
+                <option
+                  v-for="option in productPackageOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </CmsFormField>
+
+            <CmsFormField
+              label="Product Status"
+              html-for="add-portfolio-product-status"
+            >
+              <select
+                id="add-portfolio-product-status"
+                v-model="draft.productStatus"
+                class="h-9"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              >
+                <option
+                  value=""
+                  disabled
+                >
+                  Select product status
+                </option>
+                <option
+                  v-for="option in portfolioProductStatusOptions"
                   :key="option.value"
                   :value="option.value"
                 >
@@ -1216,6 +1316,84 @@ onBeforeUnmount(() => {
             </CmsFormField>
 
             <CmsFormField
+              label="Frontend Stack"
+              html-for="add-portfolio-frontend-stack"
+            >
+              <select
+                id="add-portfolio-frontend-stack"
+                v-model="draft.frontendStack"
+                class="h-9"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              >
+                <option
+                  value=""
+                  disabled
+                >
+                  Select frontend stack
+                </option>
+                <option
+                  v-for="option in portfolioFrontendStackOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </CmsFormField>
+
+            <CmsFormField
+              label="Backend Stack"
+              html-for="add-portfolio-backend-stack"
+            >
+              <select
+                id="add-portfolio-backend-stack"
+                v-model="draft.backendStack"
+                class="h-9"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              >
+                <option
+                  value=""
+                  disabled
+                >
+                  Select backend stack
+                </option>
+                <option
+                  v-for="option in portfolioBackendStackOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </CmsFormField>
+
+            <CmsFormField
+              label="Database"
+              html-for="add-portfolio-database"
+            >
+              <select
+                id="add-portfolio-database"
+                v-model="draft.database"
+                class="h-9"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              >
+                <option
+                  value=""
+                  disabled
+                >
+                  Select database
+                </option>
+                <option
+                  v-for="option in portfolioDatabaseOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </CmsFormField>
+
+            <CmsFormField
               label="Related Partners"
               full
             >
@@ -1268,6 +1446,25 @@ onBeforeUnmount(() => {
                   :value="status"
                 >
                   {{ status }}
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                for="add-portfolio-visibility"
+                class="mb-1.5 block text-[11px] font-semibold text-slate-700"
+              >
+                Visibility
+              </label>
+              <select
+                id="add-portfolio-visibility"
+                v-model="draft.visibility"
+                class="h-9"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              >
+                <option value="Internal">
+                  Internal
                 </option>
               </select>
             </div>

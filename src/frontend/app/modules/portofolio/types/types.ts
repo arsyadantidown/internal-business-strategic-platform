@@ -3,10 +3,6 @@ export type ProjectStatus
     | 'On Proposal'
     | 'Closed'
     | 'Canceled'
-    | 'Completed'
-    | 'Active'
-    | 'Planned'
-    | 'Cancelled'
 
 export type PortfolioOption = {
   label: string
