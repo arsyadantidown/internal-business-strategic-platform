@@ -1,17 +1,31 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '~/modules/auth/stores/auth.store'
 
 const authStore = useAuthStore()
 const isDropdownOpen = ref(false)
 const dropdownContainer = ref<HTMLElement | null>(null)
 
-// Data profil dummy (dapat disambungkan ke authStore.user nanti)
-const userData = ref({
-  fullName: 'Roland Brilianto',
-  roleTitle: 'Super Admin',
-  initials: 'RB',
-  unreadCount: 3
+// Mengambil data user aktif dari authStore
+const currentUser = computed(() => {
+  const u = authStore.user
+  const fullName = u?.full_name || 'User'
+  const initials =
+    fullName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word: string) => word[0])
+      .join('')
+      .toUpperCase() || 'U'
+
+  return {
+    fullName,
+    email: u?.email || '',
+    roleTitle: u?.role_name || 'No Role Assigned',
+    initials,
+    unreadCount: 0 // placeholder notifikasi
+  }
 })
 
 const toggleDropdown = () => {
@@ -30,8 +44,12 @@ const onDocumentClick = (event: MouseEvent) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('click', onDocumentClick)
+  // Fetch get me jika data user belum ada di store
+  if (!authStore.user) {
+    await authStore.fetchCurrentUser()
+  }
 })
 
 onUnmounted(() => {
@@ -58,10 +76,10 @@ onUnmounted(() => {
 
         <!-- Badge Angka Notifikasi Merah -->
         <span
-          v-if="userData.unreadCount > 0"
+          v-if="currentUser.unreadCount > 0"
           class="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white"
         >
-          {{ userData.unreadCount }}
+          {{ currentUser.unreadCount }}
         </span>
       </button>
 
@@ -79,16 +97,16 @@ onUnmounted(() => {
           <div
             class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white shadow-xs"
           >
-            {{ userData.initials }}
+            {{ currentUser.initials }}
           </div>
 
           <!-- Nama & Role -->
           <div class="hidden flex-col text-left md:flex">
             <span class="text-sm font-semibold text-slate-800 leading-tight">
-              {{ userData.fullName }}
+              {{ currentUser.fullName }}
             </span>
             <span class="text-xs text-slate-500 font-medium">
-              {{ userData.roleTitle }}
+              {{ currentUser.roleTitle }}
             </span>
           </div>
 
@@ -107,8 +125,8 @@ onUnmounted(() => {
         >
           <!-- Info Ringkas Mobile -->
           <div class="px-3 py-2 border-b border-slate-100 mb-1 md:hidden">
-            <p class="text-sm font-semibold text-slate-800">{{ userData.fullName }}</p>
-            <p class="text-xs text-slate-500">{{ userData.roleTitle }}</p>
+            <p class="text-sm font-semibold text-slate-800">{{ currentUser.fullName }}</p>
+            <p class="text-xs text-slate-500">{{ currentUser.roleTitle }}</p>
           </div>
 
           <!-- Pilihan Menu -->

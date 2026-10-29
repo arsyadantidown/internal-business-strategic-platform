@@ -126,7 +126,7 @@ watchEffect(() => {
       >
         <UIcon name="i-lucide-box" class="h-5 w-5" />
       </div>
-      <span class="text-base font-semibold text-white tracking-wide">Company</span>
+      <span class="text-base font-semibold text-white tracking-wide">IBSP</span>
     </div>
 
     <!-- Navigation List (Scrollable Area) -->
