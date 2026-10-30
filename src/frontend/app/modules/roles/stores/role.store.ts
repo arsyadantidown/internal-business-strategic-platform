@@ -24,6 +24,42 @@ export const useRoleStore = defineStore('role', () => {
   })
   const isLoadingPending = ref<boolean>(false)
 
+  const historyRequests = ref<RoleRequestItem[]>([])
+  const historyPagination = ref<ApiPagination>({
+    page: 1,
+    page_size: 10,
+    total: 0,
+    total_pages: 1
+  })
+  const isLoadingHistory = ref<boolean>(false)
+
+  const fetchHistoryRequests = async (params?: {
+    status?: 'approved' | 'rejected'
+    page?: number
+    pageSize?: number
+  }) => {
+    isLoadingHistory.value = true
+    try {
+      const res = await roleApi.getRequests({
+        status: params?.status, // jika undefined, backend ambil semua
+        page: params?.page || 1,
+        pageSize: params?.pageSize || 10
+      })
+      if (res.data) {
+        // Filter keluar status 'pending' agar murni riwayat
+        const items = (res.data.items || []).filter((item) => item.status !== 'pending')
+        historyRequests.value = items
+        historyPagination.value = res.data.pagination
+      }
+      return res.data
+    } catch (err) {
+      console.error('Failed to fetch role request history:', err)
+      throw err
+    } finally {
+      isLoadingHistory.value = false
+    }
+  }
+
   const fetchPendingRequests = async (page = 1, pageSize = 10) => {
     isLoadingPending.value = true
     try {
@@ -118,6 +154,10 @@ export const useRoleStore = defineStore('role', () => {
     isLoadingPending,
     fetchPendingRequests,
     isReviewing,
-    reviewRoleRequest
+    reviewRoleRequest,
+    historyRequests,
+    historyPagination,
+    isLoadingHistory,
+    fetchHistoryRequests
   }
 })

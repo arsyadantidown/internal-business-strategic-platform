@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { UserStats, PendingUserRequest, ActiveUser, UserRole } from '../types/types'
 
+import RequestHistoryTable from './RequestHistoryTable.vue'
+import RequestHistoryDetailModal from './RequestHistoryDetailModal.vue'
 import UsersStatsCards from './UsersStatsCards.vue'
 import PendingRequestsTable from './PendingRequestsTable.vue'
 import ActiveUsersTable from './ActiveUsersTable.vue'
@@ -15,6 +16,20 @@ import type { RoleRequestItem } from '~/modules/roles/types/role.types'
 const toast = useToast()
 const userStore = useUserStore()
 const roleStore = useRoleStore()
+
+const isHistoryDetailOpen = ref(false)
+const selectedHistoryItem = ref<RoleRequestItem | null>(null)
+const handleViewHistoryDetail = (item: RoleRequestItem) => {
+  selectedHistoryItem.value = item
+  isHistoryDetailOpen.value = true
+}
+const handleHistoryFilterChange = (payload: { status?: 'approved' | 'rejected'; page: number }) => {
+  roleStore.fetchHistoryRequests({
+    status: payload.status,
+    page: payload.page,
+    pageSize: 10
+  })
+}
 
 // State Modal Review & Assign Role
 const isAssignModalOpen = ref(false)
@@ -42,7 +57,8 @@ const handleApproveRequest = async (payload: { requestId: string; reviewNotes: s
     // Refresh KPI Stats & Tabel Pending
     await Promise.all([
       userStore.fetchManagementStats(),
-      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10)
+      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10),
+      roleStore.fetchHistoryRequests()
     ])
   } catch (err: any) {
     toast.add({
@@ -69,7 +85,8 @@ const handleRejectRequest = async (payload: { requestId: string; reviewNotes: st
     // Refresh KPI Stats & Tabel Pending
     await Promise.all([
       userStore.fetchManagementStats(),
-      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10)
+      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10),
+      roleStore.fetchHistoryRequests()
     ])
   } catch (err: any) {
     toast.add({
@@ -108,6 +125,7 @@ onMounted(() => {
   roleStore.fetchPendingRequests(1, 10)
   roleStore.fetchRoles()
   userStore.fetchUsers({ page: 1, pageSize: 10 })
+  roleStore.fetchHistoryRequests({ page: 1, pageSize: 10 })
 })
 </script>
 
@@ -149,6 +167,13 @@ onMounted(() => {
       @filter-change="handleUserFilterChange"
       @manage-user="handleManageUser"
     />
+    <RequestHistoryTable
+      :requests="roleStore.historyRequests"
+      :pagination="roleStore.historyPagination"
+      :is-loading="roleStore.isLoadingHistory"
+      @filter-change="handleHistoryFilterChange"
+      @view-detail="handleViewHistoryDetail"
+    />
     <!-- 4. Modal Popup Review Role Request (Approve & Reject) -->
     <AssignRoleModal
       :is-open="isAssignModalOpen"
@@ -157,6 +182,11 @@ onMounted(() => {
       @close="isAssignModalOpen = false"
       @approve="handleApproveRequest"
       @reject="handleRejectRequest"
+    />
+    <RequestHistoryDetailModal
+      :is-open="isHistoryDetailOpen"
+      :request="selectedHistoryItem"
+      @close="isHistoryDetailOpen = false"
     />
   </div>
 </template>
