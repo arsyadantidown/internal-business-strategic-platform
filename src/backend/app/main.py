@@ -28,6 +28,7 @@ from app.api.dashboard.views import router as dashboard_router
 from app.api.project_import.views import (
     router as project_import_router,
 )
+from app.api.customers.views import router as customers_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -120,6 +121,10 @@ app.include_router(
 
 app.include_router(
     project_import_router,
+    prefix=settings.API_V1_PREFIX,
+)
+app.include_router(
+    customers_router,
     prefix=settings.API_V1_PREFIX,
 )
 
