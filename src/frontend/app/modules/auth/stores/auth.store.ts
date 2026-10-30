@@ -35,13 +35,7 @@ export const useAuthStore = defineStore('auth', () => {
       // Simpan email ke state Pinia
       pendingEmail.value = payload.email
 
-      // 2. Langsung hit API Resend OTP untuk mengirimkan kode OTP ke email
-      try {
-        await authApi.resendOtp(payload.email)
-        hasJustSentOtp.value = true
-      } catch (err) {
-        console.warn('Auto resend OTP failed, user can retry manually on OTP page:', err)
-      }
+      hasJustSentOtp.value = true
 
       return registerRes
     } finally {
@@ -254,7 +248,7 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       clearAuth()
       isLoading.value = false
-      await navigateTo('/login', { replace: true, external: true })
+      await navigateTo('/login', { replace: true })
     }
   }
 

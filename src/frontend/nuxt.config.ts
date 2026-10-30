@@ -1,7 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  modules: ['@nuxt/eslint', '@nuxt/ui', '@pinia/nuxt', 'nuxt-echarts'],
-
+  modules: ['@nuxt/eslint', '@nuxt/ui', '@pinia/nuxt', 'nuxt-echarts', 'dayjs-nuxt'],
+  ssr: false,
   devtools: {
     enabled: true
   },

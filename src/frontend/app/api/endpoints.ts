@@ -18,6 +18,10 @@ export const ENDPOINTS = {
     REQUESTS: '/api/v1/role-requests',
     MY_REQUEST: '/api/v1/role-requests/me'
   },
+  USERS: {
+    BASE: '/api/v1/users',
+    MANAGEMENT_STATS: '/api/v1/users/management-stats'
+  },
   DIVISIONS: {
     BASE: '/api/v1/divisions'
   }
