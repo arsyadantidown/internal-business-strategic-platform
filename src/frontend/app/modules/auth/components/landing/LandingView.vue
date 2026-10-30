@@ -10,13 +10,53 @@ import collabCard from '~/assets/collab-card.png'
 import reportCard from '~/assets/report-card.png'
 import requestIllustration from '~/assets/request-role-illustration.png'
 
+import { useAuthStore } from '~/modules/auth/stores/auth.store'
+import { useRoleStore } from '~/modules/roles/stores/role.store'
+import { useDivisionStore } from '~/modules/divisions/stores/division.store'
+
+const authStore = useAuthStore()
+const roleStore = useRoleStore()
+const divisionStore = useDivisionStore()
+
+// State Dropdown Profil di Header
+const isProfileDropdownOpen = ref(false)
+const profileDropdownRef = ref<HTMLElement | null>(null)
+
+const toggleProfileDropdown = () => {
+  isProfileDropdownOpen.value = !isProfileDropdownOpen.value
+}
+
+const handleLogout = async () => {
+  isProfileDropdownOpen.value = false
+  await authStore.logout()
+}
+
+// Menutup dropdown saat user klik di luar area
+const onDocumentClick = (event: MouseEvent) => {
+  if (profileDropdownRef.value && !profileDropdownRef.value.contains(event.target as Node)) {
+    isProfileDropdownOpen.value = false
+  }
+}
+
 const toast = useToast()
 const isScrolled = ref(false)
 
-// Data User di Header
-const currentUser = ref({
-  fullName: 'Roland Brilianto',
-  initials: 'RB'
+const currentUser = computed(() => {
+  const u = authStore.user
+  const fullName = u?.full_name || 'User'
+  const initials =
+    fullName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((word: string) => word[0].toUpperCase())
+      .join('') || 'U'
+  return {
+    fullName,
+    initials,
+    email: u?.email || '',
+    roleId: u?.role_id || null
+  }
 })
 
 // State Section Aktif
@@ -24,8 +64,8 @@ const activeSection = ref('home')
 
 // State Form Request Role
 const form = ref({
-  fullName: 'Andi Pratama',
-  email: 'andi.pratama@company.com',
+  fullName: '',
+  email: '',
   division: '',
   requestedRole: '',
   reason: ''
@@ -33,17 +73,26 @@ const form = ref({
 
 const isSubmitting = ref(false)
 
-const divisionOptions = [
-  'Technology',
-  'Commercial',
-  'Operations',
-  'Finance',
-  'Human Resources',
-  'Corporate Strategy'
-]
-
-const roleOptions = ['Engineer / Project Lead', 'Commercial / Partnership Officer', 'Executive']
-
+const getRoleTheme = (index: number) => {
+  const themes = [
+    {
+      border: 'border-emerald-200/90',
+      bgGradient: 'background: linear-gradient(145deg, #ffffff 60%, #e6fbf0 100%)',
+      badge: 'bg-emerald-100 text-emerald-700 ring-emerald-200'
+    },
+    {
+      border: 'border-blue-200/90',
+      bgGradient: 'background: linear-gradient(145deg, #ffffff 60%, #e8f4fd 100%)',
+      badge: 'bg-blue-100 text-blue-700 ring-blue-200'
+    },
+    {
+      border: 'border-purple-200/90',
+      bgGradient: 'background: linear-gradient(145deg, #ffffff 60%, #f5f0ff 100%)',
+      badge: 'bg-purple-100 text-purple-700 ring-purple-200'
+    }
+  ]
+  return themes[index % themes.length]
+}
 // =========================================================================
 // SMOOTH SCROLL MENGGUNAKAN REQUEST-ANIMATION-FRAME (DIJAMIN MULUS)
 // =========================================================================
@@ -118,8 +167,17 @@ const handleScroll = () => {
   handleScrollSpy()
 }
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('scroll', handleScroll, { passive: true })
+  document.addEventListener('click', onDocumentClick)
+  handleScroll()
+
+  const userData = await authStore.fetchCurrentUser()
+  if (userData) {
+    form.value.fullName = userData.full_name
+    form.value.email = userData.email
+  }
+  await Promise.all([roleStore.fetchRoles(), divisionStore.fetchDivisions()])
 })
 
 onUnmounted(() => {
@@ -127,30 +185,62 @@ onUnmounted(() => {
     cancelAnimationFrame(animationFrameId)
   }
   window.removeEventListener('scroll', handleScroll)
+  document.removeEventListener('click', onDocumentClick)
 })
 
-const handleSubmitRequest = () => {
-  if (!form.value.division || !form.value.requestedRole || !form.value.reason) {
+const handleSubmitRequest = async () => {
+  if (!form.value.division) {
     toast.add({
-      title: 'Incomplete Form',
-      description: 'Please fill in all required fields.',
+      title: 'Division Required',
+      description: 'Please select your division.',
       color: 'error'
     })
     return
   }
 
-  isSubmitting.value = true
-  setTimeout(() => {
-    isSubmitting.value = false
+  if (!form.value.requestedRole) {
+    toast.add({
+      title: 'Role Required',
+      description: 'Please select the role you want to request.',
+      color: 'error'
+    })
+    return
+  }
+
+  const trimmedReason = form.value.reason.trim()
+  if (!trimmedReason || trimmedReason.length < 10) {
+    toast.add({
+      title: 'Invalid Reason',
+      description: 'Reason must be at least 10 characters long.',
+      color: 'error'
+    })
+    return
+  }
+
+  try {
+    const res = await roleStore.submitRoleRequest({
+      division_id: form.value.division,
+      requested_role_id: form.value.requestedRole,
+      reason: trimmedReason
+    })
+
     toast.add({
       title: 'Request Submitted',
-      description: 'Your role request has been submitted to the Super Admin.',
+      description: res.message || 'Your role request has been submitted to the Super Admin.',
       color: 'success'
     })
+
+    // Reset form setelah sukses
     form.value.division = ''
     form.value.requestedRole = ''
     form.value.reason = ''
-  }, 700)
+  } catch (err: any) {
+    toast.add({
+      title: 'Submission Failed',
+      description: err?.message || 'Failed to submit role request. Please try again.',
+      color: 'error'
+    })
+  }
 }
 </script>
 
@@ -178,7 +268,7 @@ const handleSubmitRequest = () => {
           >
             B
           </div>
-          <span class="text-lg font-bold tracking-tight text-white">App Name</span>
+          <span class="text-lg font-bold tracking-tight text-white">IBSP</span>
         </div>
 
         <!-- Navigation Links Tengah -->
@@ -256,18 +346,64 @@ const handleSubmitRequest = () => {
           </button>
         </nav>
 
-        <!-- Right Action: Profile User (Lonceng Dihilangkan Sesuai Request) -->
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2.5 cursor-pointer">
+        <!-- Right Action: Profile User & Dropdown -->
+        <div ref="profileDropdownRef" class="relative">
+          <button
+            type="button"
+            class="flex items-center gap-2.5 rounded-full p-1 sm:px-2.5 sm:py-1 transition-all cursor-pointer hover:bg-white/10"
+            @click="toggleProfileDropdown"
+          >
             <div
               class="flex h-8.5 w-8.5 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white ring-2 ring-white/20 shadow-xs"
             >
               {{ currentUser.initials }}
             </div>
-            <span class="hidden sm:inline-block text-[13px] font-semibold text-white">
-              {{ currentUser.fullName }}
-            </span>
-            <UIcon name="i-lucide-chevron-down" class="h-3.5 w-3.5 text-blue-200" />
+            <div class="hidden sm:flex flex-col text-left">
+              <span class="text-[13px] font-semibold text-white leading-tight">
+                {{ currentUser.fullName }}
+              </span>
+              <span class="text-[11px] text-blue-200 font-medium"> Tidak Ada Role </span>
+            </div>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="h-3.5 w-3.5 text-blue-200 transition-transform duration-200 ml-0.5"
+              :class="{ 'rotate-180': isProfileDropdownOpen }"
+            />
+          </button>
+
+          <!-- Dropdown Menu Popup -->
+          <div
+            v-show="isProfileDropdownOpen"
+            class="absolute right-0 mt-2.5 w-56 rounded-2xl border border-slate-100 bg-white p-2 text-slate-800 shadow-xl ring-1 ring-black/5 z-50 transition-all duration-150"
+          >
+            <!-- Header Profil di dalam Dropdown -->
+            <div class="px-3 py-2.5 border-b border-slate-100">
+              <p class="text-xs font-semibold text-slate-900 leading-snug">
+                {{ currentUser.fullName }}
+              </p>
+              <p class="text-[11px] text-slate-500 truncate">
+                {{ currentUser.email }}
+              </p>
+              <div class="mt-1 flex items-center gap-1.5">
+                <span
+                  class="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 ring-1 ring-blue-700/10"
+                >
+                  Tidak ada Role
+                </span>
+              </div>
+            </div>
+
+            <div class="my-1 border-t border-slate-100" />
+
+            <!-- Tombol Logout -->
+            <button
+              type="button"
+              class="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 hover:text-rose-700 cursor-pointer"
+              @click="handleLogout"
+            >
+              <UIcon name="i-lucide-log-out" class="h-4 w-4 text-rose-500" />
+              <span>Log out</span>
+            </button>
           </div>
         </div>
       </div>
@@ -386,13 +522,6 @@ const handleSubmitRequest = () => {
               decision-making across the organization.
             </p>
           </div>
-
-          <button
-            type="button"
-            class="self-start md:self-auto rounded-xl border border-blue-300 bg-white/90 backdrop-blur-sm px-4.5 py-2.5 text-xs font-bold text-[#155EEF] transition-all hover:bg-blue-50 hover:border-blue-500 hover:shadow-md hover:shadow-blue-500/10 active:scale-95 cursor-pointer shadow-xs"
-          >
-            Learn more about our features
-          </button>
         </div>
 
         <!-- 4 Cards Grid dengan Glow Ambient Card Berwarna -->
@@ -554,65 +683,38 @@ const handleSubmitRequest = () => {
           </p>
         </div>
 
-        <!-- 3 Role Cards Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <!-- Card 1: Executive -->
+        <!-- Dynamic Role Cards Grid -->
+        <!-- Skeleton saat loading -->
+        <div v-if="roleStore.isLoading" class="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div
-            class="relative overflow-hidden rounded-2xl border border-emerald-200/90 p-6 shadow-sm space-y-3.5 bg-white transition-all hover:shadow-md hover:-translate-y-0.5"
-            style="background: linear-gradient(145deg, #ffffff 60%, #e6fbf0 100%)"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200"
-              >
-                <UIcon name="i-lucide-user" class="h-5 w-5" />
-              </div>
-              <h3 class="text-sm font-bold text-slate-900">Executive</h3>
-            </div>
-            <p class="text-xs text-slate-600 leading-relaxed font-normal">
-              Gain a high-level view of all portfolios and partnerships, access executive dashboards
-              and strategic reports, and monitor key performance indicators to support
-              organization-wide decisions.
-            </p>
-          </div>
+            v-for="n in 3"
+            :key="n"
+            class="h-44 rounded-2xl border border-slate-200 bg-slate-50/60 p-6 animate-pulse"
+          />
+        </div>
 
-          <!-- Card 2: Commercial / Partnership Officer -->
+        <!-- Render data dari API -->
+        <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div
-            class="relative overflow-hidden rounded-2xl border border-blue-200/90 p-6 shadow-sm space-y-3.5 bg-white transition-all hover:shadow-md hover:-translate-y-0.5"
-            style="background: linear-gradient(145deg, #ffffff 60%, #e8f4fd 100%)"
+            v-for="(role, index) in roleStore.roles"
+            :key="role.id"
+            class="relative overflow-hidden rounded-2xl border p-6 shadow-sm space-y-3.5 bg-white transition-all hover:shadow-md hover:-translate-y-0.5"
+            :class="getRoleTheme(index).border"
+            :style="getRoleTheme(index).bgGradient"
           >
             <div class="flex items-center gap-3">
               <div
-                class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700 ring-1 ring-blue-200"
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1"
+                :class="getRoleTheme(index).badge"
               >
                 <UIcon name="i-lucide-user" class="h-5 w-5" />
               </div>
               <h3 class="text-sm font-bold text-slate-900 leading-snug">
-                Commercial /<br />Partnership Officer
+                {{ role.name }}
               </h3>
             </div>
             <p class="text-xs text-slate-600 leading-relaxed font-normal">
-              View and manage partnership data, maintain partner information, track collaboration
-              history, and support business development initiatives across the organization.
-            </p>
-          </div>
-
-          <!-- Card 3: Engineer / Project Lead -->
-          <div
-            class="relative overflow-hidden rounded-2xl border border-purple-200/90 p-6 shadow-sm space-y-3.5 bg-white transition-all hover:shadow-md hover:-translate-y-0.5"
-            style="background: linear-gradient(145deg, #ffffff 60%, #f5f0ff 100%)"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-700 ring-1 ring-purple-200"
-              >
-                <UIcon name="i-lucide-user" class="h-5 w-5" />
-              </div>
-              <h3 class="text-sm font-bold text-slate-900">Engineer / Project Lead</h3>
-            </div>
-            <p class="text-xs text-slate-600 leading-relaxed font-normal">
-              Access project portfolios, update project information and milestones, collaborate with
-              partners, and track project-related activities and documents.
+              {{ role.description }}
             </p>
           </div>
         </div>
@@ -753,11 +855,16 @@ const handleSubmitRequest = () => {
                   >
                   <select
                     v-model="form.division"
-                    class="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 shadow-2xs outline-none focus:border-[#155EEF] focus:ring-1 focus:ring-[#155EEF] cursor-pointer"
+                    class="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 shadow-2xs outline-none focus:border-[#155EEF] focus:ring-1 focus:ring-[#155EEF] cursor-pointer disabled:bg-slate-50 disabled:opacity-70"
+                    :disabled="divisionStore.isLoading"
                   >
-                    <option value="" disabled selected>Select your division</option>
-                    <option v-for="div in divisionOptions" :key="div" :value="div">
-                      {{ div }}
+                    <option value="" disabled selected>
+                      {{
+                        divisionStore.isLoading ? 'Loading divisions...' : 'Select your division'
+                      }}
+                    </option>
+                    <option v-for="div in divisionStore.divisions" :key="div.id" :value="div.id">
+                      {{ div.name }}
                     </option>
                   </select>
                 </div>
@@ -779,8 +886,8 @@ const handleSubmitRequest = () => {
                     class="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 shadow-2xs outline-none focus:border-[#155EEF] focus:ring-1 focus:ring-[#155EEF] cursor-pointer"
                   >
                     <option value="" disabled selected>Select the role you want to request</option>
-                    <option v-for="role in roleOptions" :key="role" :value="role">
-                      {{ role }}
+                    <option v-for="role in roleStore.roles" :key="role.id" :value="role.id">
+                      {{ role.name }}
                     </option>
                   </select>
                 </div>
@@ -814,16 +921,17 @@ const handleSubmitRequest = () => {
               <div class="flex justify-end pt-1">
                 <button
                   type="submit"
-                  :disabled="isSubmitting"
-                  class="inline-flex h-9.5 items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 text-xs font-bold text-white shadow-lg shadow-blue-500/30 transition-all hover:from-blue-700 hover:to-indigo-700 active:scale-95 disabled:opacity-50 cursor-pointer"
+                  :disabled="roleStore.isSubmitting"
+                  class="relative flex h-10 w-full items-center justify-center rounded-xl bg-[#155EEF] px-4 text-xs font-semibold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
                 >
                   <UIcon
-                    v-if="isSubmitting"
-                    name="i-lucide-loader-circle"
-                    class="h-3.5 w-3.5 animate-spin"
+                    v-if="roleStore.isSubmitting"
+                    name="i-lucide-loader-2"
+                    class="size-4 animate-spin mr-2"
                   />
-                  <UIcon v-else name="i-lucide-send" class="h-3.5 w-3.5" />
-                  <span>Submit Request</span>
+                  <span>{{
+                    roleStore.isSubmitting ? 'Submitting...' : 'Submit Role Request'
+                  }}</span>
                 </button>
               </div>
             </form>
@@ -845,7 +953,7 @@ const handleSubmitRequest = () => {
             >
               B
             </div>
-            <span class="text-lg font-bold tracking-tight text-white">App Name</span>
+            <span class="text-lg font-bold tracking-tight text-white">IBSP</span>
           </div>
           <p class="text-xs text-slate-400 max-w-sm leading-relaxed">
             Internal Portfolio &amp; Partnership Management Platform.<br />

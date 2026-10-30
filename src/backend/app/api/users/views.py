@@ -11,7 +11,6 @@ from app.models.user_model import User
 
 router = APIRouter(prefix="/users", tags=["User Management"])
 
-
 def success_response(message: str, data, meta=None):
     return {
         "success": True,
@@ -19,7 +18,6 @@ def success_response(message: str, data, meta=None):
         "data": data,
         "meta": meta,
     }
-
 
 @router.get("")
 async def get_users(
@@ -43,6 +41,18 @@ async def get_users(
         "Daftar user berhasil diambil.",
         result["data"],
         result["meta"],
+    )
+
+@router.get("/management-stats")
+async def get_management_stats(
+    admin: User = Depends(require_permission("user.manage")),
+    db: AsyncSession = Depends(get_db),
+):
+    data = await UserManagementUseCase(db).get_management_stats()
+
+    return success_response(
+        "Statistik user management berhasil diambil.",
+        data,
     )
 
 @router.get("/{user_id}")

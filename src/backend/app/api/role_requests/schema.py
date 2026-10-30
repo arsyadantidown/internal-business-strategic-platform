@@ -2,7 +2,13 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    StringConstraints,
+)
 from typing_extensions import Annotated
 
 ReasonText = Annotated[
@@ -22,6 +28,8 @@ class RoleRequestReview(BaseModel):
 class RoleRequestResponse(BaseModel):
     id: UUID
     user_id: UUID
+    requester_name: str
+    requester_email: EmailStr
     requested_role_id: UUID
     division_id: UUID
     role_name: str
@@ -29,9 +37,14 @@ class RoleRequestResponse(BaseModel):
     reason: str
     status: str
     reviewed_by: UUID | None
+    reviewer_name: str | None = None
+    reviewer_email: EmailStr | None = None
+
     reviewed_at: datetime | None
     review_notes: str | None
     created_at: datetime
     updated_at: datetime
-
     model_config = ConfigDict(from_attributes=True)
+
+class MyRoleRequestResponse(RoleRequestResponse):
+    pass
