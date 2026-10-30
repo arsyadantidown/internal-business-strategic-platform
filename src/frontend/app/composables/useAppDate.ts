@@ -1,6 +1,6 @@
-export function useAppDate() {
-  const dayjs = useDayjs()
+import dayjs from 'dayjs'
 
+export function useAppDate() {
   /**
    * Format standar request/audit (contoh: "Oct 26, 2026 14:32")
    */

@@ -16,7 +16,7 @@
     "@nuxt/ui": "^4.11.2",
     "@pinia/nuxt": "^1.0.2",
     "axios": "^1.20.0",
-    "dayjs-nuxt": "2.1.11",
+    "dayjs": "^1.11.13",
     "echarts": "^6.1.0",
     "nuxt": "^4.5.2",
     "nuxt-echarts": "1.1.0",
