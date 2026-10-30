@@ -5,6 +5,7 @@ export type TabKey =
   | 'partnership-details'
   | 'legal-documents'
   | 'collaboration-history'
+  | 'enablement'
   | 'evaluation'
   | 'related-portfolios'
   | 'notes-activities'
@@ -25,6 +26,7 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
   { key: 'partnership-details', label: 'Partnership Details', icon: 'i-lucide-handshake' },
   { key: 'legal-documents', label: 'Legal Documents', icon: 'i-lucide-file-text' },
   { key: 'collaboration-history', label: 'Collaboration History', icon: 'i-lucide-history' },
+  { key: 'enablement', label: 'Enablement & Co-Marketing', icon: 'i-lucide-megaphone' },
   { key: 'evaluation', label: 'Evaluation & Performance', icon: 'i-lucide-trending-up' },
   { key: 'related-portfolios', label: 'Related Portfolios', icon: 'i-lucide-briefcase' },
   { key: 'notes-activities', label: 'Notes & Activities', icon: 'i-lucide-clipboard-list' }

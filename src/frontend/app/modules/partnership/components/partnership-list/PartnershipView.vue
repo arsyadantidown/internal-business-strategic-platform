@@ -9,6 +9,7 @@ import PartnershipFilters from './PartnershipFilters.vue'
 import PartnershipMoreFilters from './PartnershipMoreFilters.vue'
 import PartnershipTable from './PartnershipTable.vue'
 import PartnershipPagination from './PartnershipPagination.vue'
+import PartnershipCreateModal from '../partnership-form/PartnershipCreateModal.vue'
 
 const toast = useToast()
 
@@ -34,6 +35,7 @@ const {
 } = usePartnershipList()
 
 const isMoreFiltersOpen = ref(false)
+const createModalRef = ref<InstanceType<typeof PartnershipCreateModal> | null>(null)
 
 const updateFilters = (value: typeof filters.value) => {
   filters.value = value
@@ -58,11 +60,7 @@ const handleResetAll = () => {
 }
 
 const handleAddPartner = () => {
-  toast.add({
-    title: 'Add Partner',
-    description: 'The Add Partner form is not available yet in this project.',
-    color: 'primary'
-  })
+  createModalRef.value?.open()
 }
 
 const handleExport = (scope: 'filtered' | 'all') => {
@@ -153,5 +151,7 @@ const totalResults = computed(() => filteredPartners.value.length)
       @update:current-page="setPage"
       @update:page-size="setPageSize"
     />
+
+    <PartnershipCreateModal ref="createModalRef" @submit="() => {}" />
   </div>
 </template>

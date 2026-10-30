@@ -1,4 +1,13 @@
-export type ProjectStatus = 'Completed' | 'Active' | 'On Going' | 'Planned' | 'Cancelled'
+export type ProjectStatus
+  = | 'On Going'
+    | 'On Proposal'
+    | 'Closed'
+    | 'Canceled'
+
+export type PortfolioOption = {
+  label: string
+  value: string
+}
 
 export interface ProjectItem {
   id: string
@@ -6,8 +15,18 @@ export interface ProjectItem {
   client: string
   description: string
   industry: string
+  companySize?: string
+  legalStructure?: string
+  businessUnit?: string
+  product?: string
+  customerType?: string
+  productStatus?: string
+  frontendStack?: string
+  backendStack?: string
+  database?: string
   technologies: string[]
   status: ProjectStatus
+  year?: string
   image: string
   updatedAt: string
 }
@@ -17,9 +36,17 @@ export type ViewMode = 'grid' | 'table'
 export interface PortfolioFilterState {
   search: string
   industry: string
-  technology: string
-  year: string
+  companySize: string
+  legalStructure: string
+  businessUnit: string
+  product: string
+  customerType: string
+  productStatus: string
   status: string
+  frontendStack: string
+  backendStack: string
+  database: string
+  year: string
 }
 
 // --- Tambahan Khusus untuk Halaman Detail ---
@@ -61,4 +88,5 @@ export interface ProjectDetailItem extends ProjectItem {
   }[]
   documents: ProjectDocument[]
   partners: RelatedPartner[]
+  lastUpdated?: string
 }

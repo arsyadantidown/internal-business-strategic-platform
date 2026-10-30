@@ -66,10 +66,10 @@ export const performanceTrend: TrendPoint[] = [
 ]
 
 export const portfolioStatus: StatusSlice[] = [
-  { label: 'Active', value: 128, color: '#2563EB' },
-  { label: 'Completed', value: 96, color: '#16A34A' },
-  { label: 'On Going', value: 46, color: '#F59E0B' },
-  { label: 'Planned', value: 30, color: '#94A3B8' }
+  { label: 'On Going', value: 128, color: '#2563EB' },
+  { label: 'Closed', value: 96, color: '#16A34A' },
+  { label: 'On Proposal', value: 46, color: '#F59E0B' },
+  { label: 'Canceled', value: 30, color: '#94A3B8' }
 ]
 
 export const topCategories: CategoryMetric[] = [
@@ -101,7 +101,7 @@ export const featuredProjects: FeaturedProject[] = [
     description: 'End-to-end digital banking platform for improved customer experience.',
     industry: 'Banking',
     technologies: ['Web', 'Fintech'],
-    status: 'Completed',
+    status: 'Closed',
     image:
       'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop',
     updatedAt: '2 days ago',
@@ -115,7 +115,7 @@ export const featuredProjects: FeaturedProject[] = [
     description: 'IoT-based manufacturing monitoring and predictive maintenance platform.',
     industry: 'Manufacturing',
     technologies: ['IoT', 'Analytics'],
-    status: 'Active',
+    status: 'On Going',
     image:
       'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=600&auto=format&fit=crop',
     updatedAt: '5 days ago',
@@ -129,7 +129,7 @@ export const featuredProjects: FeaturedProject[] = [
     description: 'Patient management and resource allocation system for healthcare providers.',
     industry: 'Healthcare',
     technologies: ['IoT', 'Mobile', 'SaaS'],
-    status: 'Completed',
+    status: 'Closed',
     image:
       'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=600&auto=format&fit=crop',
     updatedAt: '2 weeks ago',
@@ -143,7 +143,7 @@ export const featuredProjects: FeaturedProject[] = [
     description: 'Monitoring and analytics platform for renewable energy assets.',
     industry: 'Energy',
     technologies: ['Sustainability', 'Dashboard'],
-    status: 'Active',
+    status: 'On Going',
     image:
       'https://images.unsplash.com/photo-1466611653911-95081537e5b7?q=80&w=600&auto=format&fit=crop',
     updatedAt: '1 month ago',

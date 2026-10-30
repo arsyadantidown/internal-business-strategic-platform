@@ -25,7 +25,9 @@ const sortOptions = [
 <template>
   <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <!-- Total Counter -->
-    <div class="text-sm font-bold text-slate-900">{{ totalCount }} Projects</div>
+    <div class="text-sm font-bold text-slate-900">
+      {{ totalCount }} {{ totalCount === 1 ? 'Project' : 'Projects' }}
+    </div>
 
     <!-- Controls: Grid/Table Toggle & Sort By -->
     <div class="flex items-center gap-3">
