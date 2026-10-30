@@ -156,7 +156,7 @@ const getRoleBadgeClass = (roleName?: string | null) => {
       <table class="w-full text-left text-xs">
         <thead class="border-b border-slate-100 text-[11px] font-bold text-slate-400">
           <tr>
-            <th class="py-2.5 pr-4">Name</th><th class="py-2.5 pr-4">test</th>
+            <th class="py-2.5 pr-4">Name</th>
             <th class="px-4 py-2.5">Email</th>
             <th class="px-4 py-2.5">Role</th>
             <th class="px-4 py-2.5">Status</th>
