@@ -47,7 +47,7 @@ const onDocumentClick = (event: MouseEvent) => {
 onMounted(async () => {
   document.addEventListener('click', onDocumentClick)
   // Fetch get me jika data user belum ada di store
-  if (!authStore.user) {
+  if (!authStore.user || !authStore.user.full_name) {
     await authStore.fetchCurrentUser()
   }
 })

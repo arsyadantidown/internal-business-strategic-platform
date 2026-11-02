@@ -68,7 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
         role_name: data?.role_name ?? existingUserData.role_name ?? null,
         role_code: data?.role_code ?? existingUserData.role_code ?? null
       }
-
+      await fetchCurrentUser()
       return response
     } finally {
       isLoading.value = false
