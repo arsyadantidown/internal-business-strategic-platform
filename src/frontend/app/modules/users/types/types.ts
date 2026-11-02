@@ -44,3 +44,9 @@ export interface UserManagementStatsResponse {
   active_users: number
   inactive_users: number
 }
+
+export interface UpdateUserPayload {
+  full_name?: string
+  role_id?: string
+  is_active?: boolean
+}

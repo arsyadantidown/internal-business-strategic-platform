@@ -30,13 +30,8 @@ const getActionItems = (user: UserItem) => [
     {
       label: 'Edit',
       icon: 'i-lucide-pencil',
+      class: 'cursor-pointer',
       onSelect: () => emit('edit', user)
-    },
-    {
-      label: 'Delete',
-      icon: 'i-lucide-trash-2',
-      color: 'error' as const,
-      onSelect: () => emit('delete', user)
     }
   ]
 ]

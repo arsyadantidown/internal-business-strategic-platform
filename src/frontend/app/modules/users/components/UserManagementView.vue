@@ -7,11 +7,13 @@ import UsersStatsCards from './UsersStatsCards.vue'
 import PendingRequestsTable from './PendingRequestsTable.vue'
 import ActiveUsersTable from './ActiveUsersTable.vue'
 import AssignRoleModal from './AssignRoleModal.vue'
+import EditUserModal from './EditUserModal.vue'
 
 import { useUserStore } from '../stores/user.store.ts'
 import { useRoleStore } from '~/modules/roles/stores/role.store'
 
 import type { RoleRequestItem } from '~/modules/roles/types/role.types'
+import type { UserItem, UpdateUserPayload } from '../types/types'
 
 const toast = useToast()
 const userStore = useUserStore()
@@ -29,6 +31,38 @@ const handleHistoryFilterChange = (payload: { status?: 'approved' | 'rejected'; 
     page: payload.page,
     pageSize: 5
   })
+}
+
+// State Modal Edit User
+const isEditModalOpen = ref(false)
+const selectedUserForEdit = ref<UserItem | null>(null)
+
+const handleEditUser = (user: UserItem) => {
+  selectedUserForEdit.value = user
+  isEditModalOpen.value = true
+}
+
+const handleSaveEditUser = async (payload: { userId: string; data: UpdateUserPayload }) => {
+  try {
+    const res = await userStore.updateUser(payload.userId, payload.data)
+    toast.add({
+      title: 'User Updated',
+      description: res.message || 'User has been successfully updated.',
+      color: 'success'
+    })
+    isEditModalOpen.value = false
+    // Refresh KPI Stats & Tabel Users
+    await Promise.all([
+      userStore.fetchManagementStats(),
+      userStore.fetchUsers({ page: userStore.usersPagination.page, pageSize: 5 })
+    ])
+  } catch (err: any) {
+    toast.add({
+      title: 'Update Failed',
+      description: err?.response?.data?.message || err?.message || 'Failed to update user.',
+      color: 'error'
+    })
+  }
 }
 
 // State Modal Review & Assign Role
@@ -166,6 +200,7 @@ onMounted(() => {
       :is-loading="userStore.isLoadingUsers"
       @filter-change="handleUserFilterChange"
       @manage-user="handleManageUser"
+      @edit="handleEditUser"
     />
     <RequestHistoryTable
       :requests="roleStore.historyRequests"
@@ -187,6 +222,16 @@ onMounted(() => {
       :is-open="isHistoryDetailOpen"
       :request="selectedHistoryItem"
       @close="isHistoryDetailOpen = false"
+    />
+
+    <!-- Modal Edit User -->
+    <EditUserModal
+      :is-open="isEditModalOpen"
+      :user="selectedUserForEdit"
+      :roles="roleStore.roles"
+      :is-submitting="userStore.isUpdating"
+      @close="isEditModalOpen = false"
+      @submit="handleSaveEditUser"
     />
   </div>
 </template>

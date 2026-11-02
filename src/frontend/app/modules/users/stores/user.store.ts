@@ -17,7 +17,7 @@ export const useUserStore = defineStore('user', () => {
     page_size: 5
   })
   const isLoadingUsers = ref<boolean>(false)
-
+  const isUpdating = ref<boolean>(false)
   const fetchManagementStats = async () => {
     isLoadingStats.value = true
     try {
@@ -57,13 +57,32 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  const updateUser = async (userId: string, payload: UpdateUserPayload) => {
+    isUpdating.value = true
+    try {
+      const res = await userApi.updateUser(userId, payload)
+      // Update item di list lokal jika ada
+      const index = users.value.findIndex((u) => u.id === userId)
+      if (index !== -1 && res.data) {
+        users.value[index] = { ...users.value[index], ...res.data }
+      }
+      return res
+    } catch (err) {
+      console.error('Failed to update user:', err)
+      throw err
+    } finally {
+      isUpdating.value = false
+    }
+  }
   return {
     stats,
     isLoadingStats,
     fetchManagementStats,
     users,
+    isUpdating,
     usersPagination,
     isLoadingUsers,
-    fetchUsers
+    fetchUsers,
+    updateUser
   }
 })
