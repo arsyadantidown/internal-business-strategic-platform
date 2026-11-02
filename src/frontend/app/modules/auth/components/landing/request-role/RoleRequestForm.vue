@@ -22,6 +22,14 @@ const form = ref({
   reason: ''
 })
 
+const availableRoles = computed(() => {
+  return props.roles.filter(
+    (role) =>
+      role.code?.toUpperCase() !== 'SUPER_ADMIN' &&
+      !role.name?.toLowerCase().includes('super admin')
+  )
+})
+
 const toast = useToast()
 
 const onSubmit = () => {
@@ -154,7 +162,7 @@ defineExpose({ resetForm })
               class="h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 shadow-2xs outline-none focus:border-[#155EEF] focus:ring-1 focus:ring-[#155EEF] cursor-pointer"
             >
               <option value="" disabled selected>Select the role you want to request</option>
-              <option v-for="role in roles" :key="role.id" :value="role.id">
+              <option v-for="role in availableRoles" :key="role.id" :value="role.id">
                 {{ role.name }}
               </option>
             </select>
