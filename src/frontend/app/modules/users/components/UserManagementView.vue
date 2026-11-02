@@ -27,7 +27,7 @@ const handleHistoryFilterChange = (payload: { status?: 'approved' | 'rejected'; 
   roleStore.fetchHistoryRequests({
     status: payload.status,
     page: payload.page,
-    pageSize: 10
+    pageSize: 5
   })
 }
 
@@ -57,7 +57,7 @@ const handleApproveRequest = async (payload: { requestId: string; reviewNotes: s
     // Refresh KPI Stats & Tabel Pending
     await Promise.all([
       userStore.fetchManagementStats(),
-      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10),
+      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 5),
       roleStore.fetchHistoryRequests()
     ])
   } catch (err: any) {
@@ -85,7 +85,7 @@ const handleRejectRequest = async (payload: { requestId: string; reviewNotes: st
     // Refresh KPI Stats & Tabel Pending
     await Promise.all([
       userStore.fetchManagementStats(),
-      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10),
+      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 5),
       roleStore.fetchHistoryRequests()
     ])
   } catch (err: any) {
@@ -106,7 +106,7 @@ const handleUserFilterChange = (filter: {
 }) => {
   userStore.fetchUsers({
     page: filter.page,
-    pageSize: 10,
+    pageSize: 5,
     search: filter.search || undefined,
     // Jangan kirim __NO_ROLE__ ke backend karena butuh UUID
     roleId: filter.roleId && filter.roleId !== '__NO_ROLE__' ? filter.roleId : undefined,
@@ -118,14 +118,14 @@ const handleManageUser = (user: ActiveUser) => {
 }
 
 const handlePageChange = (page: number) => {
-  roleStore.fetchPendingRequests(page, 10)
+  roleStore.fetchPendingRequests(page, 5)
 }
 onMounted(() => {
   userStore.fetchManagementStats()
-  roleStore.fetchPendingRequests(1, 10)
+  roleStore.fetchPendingRequests(1, 5)
   roleStore.fetchRoles()
-  userStore.fetchUsers({ page: 1, pageSize: 10 })
-  roleStore.fetchHistoryRequests({ page: 1, pageSize: 10 })
+  userStore.fetchUsers({ page: 1, pageSize: 5 })
+  roleStore.fetchHistoryRequests({ page: 1, pageSize: 5 })
 })
 </script>
 

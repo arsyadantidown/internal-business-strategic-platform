@@ -18,18 +18,14 @@ export const useRoleStore = defineStore('role', () => {
   const pendingRequests = ref<RoleRequestItem[]>([])
   const pendingPagination = ref<ApiPagination>({
     page: 1,
-    page_size: 10,
-    total: 0,
-    total_pages: 1
+    page_size: 5
   })
   const isLoadingPending = ref<boolean>(false)
 
   const historyRequests = ref<RoleRequestItem[]>([])
   const historyPagination = ref<ApiPagination>({
     page: 1,
-    page_size: 10,
-    total: 0,
-    total_pages: 1
+    page_size: 5
   })
   const isLoadingHistory = ref<boolean>(false)
 
@@ -43,7 +39,7 @@ export const useRoleStore = defineStore('role', () => {
       const res = await roleApi.getRequests({
         status: params?.status, // jika undefined, backend ambil semua
         page: params?.page || 1,
-        pageSize: params?.pageSize || 10
+        pageSize: params?.pageSize || 5
       })
       if (res.data) {
         // Filter keluar status 'pending' agar murni riwayat
@@ -60,7 +56,7 @@ export const useRoleStore = defineStore('role', () => {
     }
   }
 
-  const fetchPendingRequests = async (page = 1, pageSize = 10) => {
+  const fetchPendingRequests = async (page = 1, pageSize = 5) => {
     isLoadingPending.value = true
     try {
       const res = await roleApi.getRequests({

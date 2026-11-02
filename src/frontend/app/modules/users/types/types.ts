@@ -2,8 +2,8 @@
 export interface UserPaginationMeta {
   page: number
   page_size: number
-  total: number
-  total_pages: number
+  total?: number
+  total_pages?: number
 }
 
 // User item dari GET /api/v1/users (Active Users Table)

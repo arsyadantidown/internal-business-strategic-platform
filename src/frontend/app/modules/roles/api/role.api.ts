@@ -41,7 +41,7 @@ export const roleApi = {
     const queryParams: Record<string, any> = {}
     if (params?.status) queryParams.status = params.status
     if (params?.page) queryParams.page = params.page
-    if (params?.pageSize) queryParams['page-size'] = params.pageSize
+    if (params?.pageSize) queryParams['page_size'] = params.pageSize
     const response = await apiClient.get(ENDPOINTS.ROLES.REQUESTS, {
       params: queryParams
     })

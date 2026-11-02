@@ -14,9 +14,7 @@ export const useUserStore = defineStore('user', () => {
   const users = ref<UserItem[]>([])
   const usersPagination = ref<UserPaginationMeta>({
     page: 1,
-    page_size: 10,
-    total: 0,
-    total_pages: 1
+    page_size: 5
   })
   const isLoadingUsers = ref<boolean>(false)
 
