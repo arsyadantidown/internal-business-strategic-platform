@@ -103,19 +103,36 @@ const { formatDateTime } = useAppDate()
 
       <!-- Section: Reason for Rejection -->
       <div class="space-y-2 pt-1 border-t border-slate-100">
-        <div class="flex items-center gap-2 text-xs font-bold text-slate-900">
-          <UIcon name="i-lucide-message-square" class="h-4 w-4 text-rose-500" />
-          <span>Reason for Rejection</span>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2 text-xs font-bold text-slate-900">
+            <UIcon name="i-lucide-message-square" class="h-4 w-4 text-rose-500" />
+            <span>Reason for Rejection</span>
+          </div>
+
+          <!-- Nama Reviewer & Tanggal Review (jika ada) -->
+          <div
+            v-if="request.reviewer_name"
+            class="flex items-center gap-1.5 text-[11px] text-slate-500"
+          >
+            <span>Reviewed by</span>
+            <span class="font-semibold text-slate-700">{{ request.reviewer_name }}</span>
+            <span v-if="request.reviewed_at" class="text-slate-300">•</span>
+            <span v-if="request.reviewed_at" class="text-slate-400">
+              {{ formatDateTime(request.reviewed_at) }}
+            </span>
+          </div>
         </div>
 
         <!-- Box Isi Alasan Penolakan -->
         <div
-          class="rounded-xl border border-rose-100 bg-[#FFF5F5] p-3 text-xs text-slate-700 leading-relaxed font-normal"
+          class="rounded-xl border border-rose-100 bg-[#FFF5F5] p-3.5 text-xs text-slate-700 leading-relaxed font-normal space-y-1.5"
         >
-          {{
-            request.review_notes ||
-            'Your request does not match the current role assignment criteria for your division. Please consult your division representative for more information.'
-          }}
+          <p>
+            {{
+              request.review_notes ||
+              'Your request does not match the current role assignment criteria for your division. Please consult your division representative for more information.'
+            }}
+          </p>
         </div>
       </div>
 
