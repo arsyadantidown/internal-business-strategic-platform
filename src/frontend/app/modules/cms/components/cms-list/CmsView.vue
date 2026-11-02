@@ -66,17 +66,12 @@ const editingPartnership = computed(() =>
 
 const openCreate = () => {
   editingContent.value = null
-  if (activeKind.value === 'portfolio') {
-    router.push({
-      query: {
-        ...router.currentRoute.value.query,
-        mode: 'add'
-      }
-    })
-    return
-  }
-
-  isPartnershipFormOpen.value = true
+  router.push({
+    query: {
+      ...router.currentRoute.value.query,
+      mode: 'add'
+    }
+  })
 }
 
 const openDetail = (content: CmsContent) => {

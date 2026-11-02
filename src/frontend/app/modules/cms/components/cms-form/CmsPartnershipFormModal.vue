@@ -13,15 +13,13 @@ import {
   cmsLocationOptions,
   cmsPartnerCategoryOptions,
   cmsPartnerTypeOptions,
-  cmsRelatedPortfolioFilterOptions,
-  cmsVisibilityFilterOptions
+  cmsRelatedPortfolioFilterOptions
 } from '../../data/cms.data'
 import { portfolioIndustryOptions } from '~/modules/portofolio/data/portfolioOptions'
 import {
   cmsControlClass,
   cmsControlStateClass,
   joinCmsLines,
-  slugifyCmsTitle,
   splitCmsLines
 } from '../../utils/cmsForm'
 import { formatCmsDateTimeLocalValue, stripCmsHtml } from '../../utils/cmsFormat'
@@ -387,7 +385,7 @@ watch(
                   type="checkbox"
                   class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 >
-                Highlight this partner on the public directory
+                Highlight this partner on the internal dashboard
               </label>
             </CmsFormField>
           </CmsFormSection>
@@ -427,7 +425,7 @@ watch(
 
           <CmsFormSection
             title="Partnership Content"
-            description="Narrative used on the public partnership detail."
+            description="Narrative used on the internal partnership detail."
             icon="i-lucide-align-left"
           >
             <CmsFormField
@@ -476,7 +474,7 @@ watch(
 
           <CmsFormSection
             title="Brand Asset"
-            description="Logo used on the public partnership story."
+            description="Logo used on the internal partnership story."
             icon="i-lucide-image"
           >
             <CmsFormField

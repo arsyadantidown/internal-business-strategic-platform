@@ -19,7 +19,7 @@ const showSidebar = computed(() => {
 
 <template>
   <!-- 1. Halaman Internal / Dashboard (Dengan Sidebar & Navbar) -->
-  <div v-if="showSidebar" class="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900">
+  <div v-if="showSidebar" class="flex h-screen w-full overflow-hidden bg-slate-50 text-slate-900 relative">
     <LayoutAppSidebar />
     <div class="flex flex-1 flex-col overflow-hidden">
       <LayoutAppNavbar />
