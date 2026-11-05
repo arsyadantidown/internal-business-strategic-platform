@@ -22,6 +22,14 @@ interface NavigationSection {
 
 const route = useRoute()
 
+// Helper: Cek apakah sebuah single menu sedang aktif (termasuk sub-path/halaman di dalamnya)
+const isMenuActive = (targetTo?: string): boolean => {
+  if (!targetTo) return false
+  if (targetTo === '/dashboard') {
+    return route.path === '/dashboard'
+  }
+  return route.path === targetTo || route.path.startsWith(`${targetTo}/`)
+}
 // 1. Data Navigation Schema (Single Source of Truth)
 const navigationSections: NavigationSection[] = [
   {
@@ -85,6 +93,11 @@ const navigationSections: NavigationSection[] = [
         label: 'Audit Log',
         icon: 'i-lucide-history',
         to: '/admin/audit-log'
+      },
+      {
+        label: 'Permission',
+        icon: 'i-lucide-shield-check',
+        to: '/admin/permission'
       },
       {
         label: 'Settings',
@@ -192,8 +205,12 @@ watchEffect(() => {
             <NuxtLink
               v-else
               :to="item.to!"
-              exact-active-class="bg-blue-600 text-white font-semibold shadow-xs"
-              class="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 transition-all duration-150 cursor-pointer hover:bg-slate-800/60 hover:text-white"
+              class="flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150 cursor-pointer"
+              :class="[
+                isMenuActive(item.to)
+                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              ]"
             >
               <div class="flex items-center gap-3">
                 <UIcon :name="item.icon" class="h-5 w-5 shrink-0" />
