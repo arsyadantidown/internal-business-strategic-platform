@@ -1,10 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import RoleManagementTable from './RoleManagementTable.vue'
 import PermissionListTable from './PermissionListTable.vue'
 import type { RoleTableItem, PermissionTableItem } from '../types/types'
 import EditPermissionModal from './EditPermissionModal.vue'
 import EditRoleModal from './EditRoleModal.vue'
+
+import { usePermissionStore } from '../stores/permission.store'
+
+const permissionStore = usePermissionStore()
+onMounted(async () => {
+  // Panggil kedua API saat halaman pertama kali dimuat
+  await Promise.all([permissionStore.fetchRoles(true), permissionStore.fetchPermissions()])
+})
 // State Tab Aktif ('roles' atau 'permissions')
 const activeTab = ref<'roles' | 'permissions'>('roles')
 
@@ -108,6 +116,8 @@ const handleAddPermission = () => {
       <!-- TAB 1: ROLES TABLE -->
       <RoleManagementTable
         v-if="activeTab === 'roles'"
+        :roles="permissionStore.roles"
+        :is-loading="permissionStore.isLoadingRoles"
         @add-role="handleAddRole"
         @view-role="handleViewRole"
         @edit-role="handleEditRole"
@@ -116,6 +126,8 @@ const handleAddPermission = () => {
       <!-- TAB 2: PERMISSIONS TABLE -->
       <PermissionListTable
         v-else-if="activeTab === 'permissions'"
+        :permissions="permissionStore.permissions"
+        :is-loading="permissionStore.isLoadingPermissions"
         @add-permission="handleAddPermission"
         @edit-permission="handleEditPermission"
       />

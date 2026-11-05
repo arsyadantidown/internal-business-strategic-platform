@@ -11,3 +11,9 @@ export interface PermissionTableItem {
   code: string
   description: string
 }
+export interface PermissionItem {
+  id: string
+  code: string
+  name: string
+  description: string
+}

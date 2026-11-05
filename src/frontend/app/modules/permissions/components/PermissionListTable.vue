@@ -1,50 +1,20 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { PermissionTableItem } from '../types/types'
+import type { PermissionItem } from '../types/types'
+
+interface Props {
+  permissions: PermissionItem[]
+  isLoading?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  permissions: () => [],
+  isLoading: false
+})
 
 const emit = defineEmits<{
   (e: 'add-permission'): void
-  (e: 'edit-permission', permission: PermissionTableItem): void
+  (e: 'edit-permission', permission: PermissionItem): void
 }>()
-
-// Data Mockup sesuai tabel kedua di gambar
-const permissions = ref<PermissionTableItem[]>([
-  {
-    id: '1',
-    name: 'View Financial Data',
-    code: 'financial.view',
-    description:
-      'Melihat angka keuangan project: nilai kontrak, carry over, revenue, COGS, biaya...'
-  },
-  {
-    id: '2',
-    name: 'Manage Portfolio',
-    code: 'portfolio.manage',
-    description: 'Menambah, mengubah, dan menghapus project, perspektifnya, file project, serta...'
-  },
-  {
-    id: '3',
-    name: 'View Portfolio',
-    code: 'portfolio.view',
-    description: 'Melihat portofolio, master data portofolio, dan mengunduh file project.'
-  },
-  {
-    id: '4',
-    name: 'Manage Roles and Permissions',
-    code: 'role.manage',
-    description:
-      'Create and update roles, manage permission metadata, and assign permissions to roles.'
-  },
-  {
-    id: '5',
-    name: 'Review Role Request',
-    code: 'role_request.review',
-    description: 'Review and approve or reject role requests.'
-  }
-])
-
-const currentPage = ref(1)
-const totalPages = ref(2)
 </script>
 
 <template>

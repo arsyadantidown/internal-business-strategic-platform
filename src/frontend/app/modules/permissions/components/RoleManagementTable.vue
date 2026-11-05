@@ -1,43 +1,21 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { RoleTableItem } from '../types/types'
+import type { RoleItem } from '~/modules/roles/types/role.types'
+
+interface Props {
+  roles: RoleItem[]
+  isLoading?: boolean
+}
+
+withDefaults(defineProps<Props>(), {
+  roles: () => [],
+  isLoading: false
+})
 
 const emit = defineEmits<{
   (e: 'add-role'): void
-  (e: 'view-role', role: RoleTableItem): void
-  (e: 'edit-role', role: RoleTableItem): void
+  (e: 'view-role', role: RoleItem): void
+  (e: 'edit-role', role: RoleItem): void
 }>()
-
-// Data Mockup sesuai gambar
-const roles = ref<RoleTableItem[]>([
-  {
-    id: '1',
-    name: 'Super Admin / Executive',
-    code: 'SUPER_ADMIN',
-    description:
-      'Mempunyai hak akses penuh atas pengaturan sistem, manajemen user, role & permission.',
-    status: 'Active'
-  },
-  {
-    id: '2',
-    name: 'User Commercial / Partnership Officer',
-    code: 'COMMERCIAL_PARTNERSHIP_OFFICER',
-    description:
-      'Mengelola data mitra, dokumen kemitraan, status kerja sama, serta evaluasi kemitraan.',
-    status: 'Active'
-  },
-  {
-    id: '3',
-    name: 'User Engineer / Project Lead',
-    code: 'ENGINEER_PROJECT_LEAD',
-    description:
-      'Mengelola data teknis portofolio proyek, meninjau kapabilitas teknis mitra dan milestone.',
-    status: 'Active'
-  }
-])
-
-const currentPage = ref(1)
-const totalPages = ref(4)
 </script>
 
 <template>
@@ -102,10 +80,18 @@ const totalPages = ref(4)
             <!-- Status Badge -->
             <td class="px-4 py-3.5 whitespace-nowrap">
               <span
-                class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-100"
+                class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold border"
+                :class="
+                  item.is_active
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                    : 'bg-slate-100 text-slate-500 border-slate-200'
+                "
               >
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <span>{{ item.status }}</span>
+                <span
+                  class="h-1.5 w-1.5 rounded-full"
+                  :class="item.is_active ? 'bg-emerald-500' : 'bg-slate-400'"
+                />
+                <span>{{ item.is_active ? 'Active' : 'Inactive' }}</span>
               </span>
             </td>
 
