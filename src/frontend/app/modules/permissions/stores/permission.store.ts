@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { permissionApi } from '../api/permission.api'
-import type { PermissionItem, RoleDetailResponse, UpdateRolePayload } from '../types/types'
+import type {
+  PermissionItem,
+  RoleDetailResponse,
+  UpdateRolePayload,
+  UpdatePermissionPayload,
+  SetRolePermissionsPayload
+} from '../types/types'
 import type { RoleItem } from '~/modules/roles/types/role.types'
 
 export const usePermissionStore = defineStore('permission', () => {
@@ -10,10 +16,11 @@ export const usePermissionStore = defineStore('permission', () => {
 
   const permissions = ref<PermissionItem[]>([])
   const isLoadingPermissions = ref(false)
-
+  const isUpdatingPermission = ref(false)
   // Loading state modal edit
   const isFetchingDetail = ref(false)
   const isUpdatingRole = ref(false)
+  const isSavingRolePermissions = ref(false)
 
   const fetchRoles = async (includeInactive = true) => {
     isLoadingRoles.value = true
@@ -76,6 +83,41 @@ export const usePermissionStore = defineStore('permission', () => {
     }
   }
 
+  // 5. PUT /api/v1/roles/{role_id}/permissions
+  const setRolePermissions = async (roleId: string, permissionIds: string[]) => {
+    isSavingRolePermissions.value = true
+    try {
+      const res = await permissionApi.setRolePermissions(roleId, {
+        permission_ids: permissionIds
+      })
+      return res
+    } catch (err) {
+      console.error('Failed to set role permissions:', err)
+      throw err
+    } finally {
+      isSavingRolePermissions.value = false
+    }
+  }
+
+  // 6. Update Permission
+  const updatePermission = async (permissionId: string, payload: UpdatePermissionPayload) => {
+    isUpdatingPermission.value = true
+    try {
+      const res = await permissionApi.updatePermission(permissionId, payload)
+      // Perbarui item di array tabel lokal secara langsung (optimistic/reactive update)
+      const index = permissions.value.findIndex((p) => p.id === permissionId)
+      if (index !== -1 && res.data) {
+        permissions.value[index] = { ...permissions.value[index], ...res.data }
+      }
+      return res
+    } catch (err) {
+      console.error('Failed to update permission:', err)
+      throw err
+    } finally {
+      isUpdatingPermission.value = false
+    }
+  }
+
   return {
     roles,
     isLoadingRoles,
@@ -86,6 +128,10 @@ export const usePermissionStore = defineStore('permission', () => {
     isFetchingDetail,
     isUpdatingRole,
     fetchRoleDetail,
-    updateRole
+    updateRole,
+    isUpdatingPermission,
+    updatePermission,
+    isSavingRolePermissions,
+    setRolePermissions
   }
 })

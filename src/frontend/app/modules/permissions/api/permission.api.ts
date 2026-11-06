@@ -1,6 +1,12 @@
 import { apiClient } from '~/api/client'
 import { ENDPOINTS } from '~/api/endpoints'
-import type { PermissionItem, RoleDetailResponse, UpdateRolePayload } from '../types/types'
+import type {
+  PermissionItem,
+  RoleDetailResponse,
+  UpdateRolePayload,
+  UpdatePermissionPayload,
+  SetRolePermissionsPayload
+} from '../types/types'
 import type { RoleItem } from '~/modules/roles/types/role.types'
 
 export const permissionApi = {
@@ -46,6 +52,34 @@ export const permissionApi = {
     data: PermissionItem[]
   }> {
     const response = await apiClient.get(ENDPOINTS.PERMISSIONS.BASE)
+    return response.data
+  },
+
+  // 5. PUT /api/v1/roles/{role_id}/permissions
+  async setRolePermissions(
+    roleId: string,
+    payload: SetRolePermissionsPayload
+  ): Promise<{
+    success: boolean
+    message: string
+    data: {
+      role_id: string
+      permission_ids: string[]
+    }
+  }> {
+    const response = await apiClient.put(`${ENDPOINTS.ROLES.BASE}/${roleId}/permissions`, payload)
+    return response.data
+  },
+
+  async updatePermission(
+    permissionId: string,
+    payload: UpdatePermissionPayload
+  ): Promise<{
+    success: boolean
+    message: string
+    data: PermissionItem
+  }> {
+    const response = await apiClient.patch(`${ENDPOINTS.PERMISSIONS.BASE}/${permissionId}`, payload)
     return response.data
   }
 }

@@ -32,15 +32,6 @@ const totalPages = ref(1)
           permissions in the system.
         </p>
       </div>
-
-      <button
-        type="button"
-        class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-blue-700 active:scale-95 cursor-pointer"
-        @click="emit('add-permission')"
-      >
-        <UIcon name="i-lucide-plus-circle" class="h-4 w-4" />
-        <span>Add Permission</span>
-      </button>
     </div>
 
     <!-- Table -->

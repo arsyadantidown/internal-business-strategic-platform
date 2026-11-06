@@ -30,12 +30,28 @@ const handleEditPermission = (permission: PermissionItem) => {
   isEditPermissionModalOpen.value = true
 }
 // Saat tombol Save Changes di modal diklik (sementara alert dulu)
-const handleSaveEditPermission = (payload: { permissionId: string; data: UpdatePermissionPayload }) => {
-  console.log('Save permission payload:', payload)
-  alert(`Permission "${selectedPermissionForEdit.value?.name}" saved successfully (Dummy)!`)
-  isEditPermissionModalOpen.value = false
+const handleSaveEditPermission = async (payload: {
+  permissionId: string
+  data: UpdatePermissionPayload
+}) => {
+  try {
+    const res = await permissionStore.updatePermission(payload.permissionId, payload.data)
+    toast.add({
+      title: 'Permission Updated',
+      description: res.message || 'Permission has been successfully updated.',
+      color: 'success'
+    })
+    isEditPermissionModalOpen.value = false
+    // Refresh daftar permission dari server untuk sinkronisasi penuh
+    await permissionStore.fetchPermissions()
+  } catch (err: any) {
+    toast.add({
+      title: 'Update Failed',
+      description: err?.response?.data?.message || err?.message || 'Failed to update permission.',
+      color: 'error'
+    })
+  }
 }
-
 // 1. Saat tombol pensil diklik -> panggil API Detail Role (No. 2)
 const handleEditRole = async (role: RoleItem) => {
   try {
@@ -169,6 +185,7 @@ const handleAddPermission = () => {
       <EditPermissionModal
         :is-open="isEditPermissionModalOpen"
         :permission="selectedPermissionForEdit"
+        :is-submitting="permissionStore.isUpdatingPermission"
         @close="isEditPermissionModalOpen = false"
         @submit="handleSaveEditPermission"
       />
