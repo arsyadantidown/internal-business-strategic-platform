@@ -24,5 +24,8 @@ export const ENDPOINTS = {
   },
   DIVISIONS: {
     BASE: '/api/v1/divisions'
+  },
+  PERMISSIONS: {
+    BASE: '/api/v1/permissions'
   }
 } as const
