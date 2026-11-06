@@ -2,8 +2,8 @@
 export interface UserPaginationMeta {
   page: number
   page_size: number
-  total: number
-  total_pages: number
+  total?: number
+  total_pages?: number
 }
 
 // User item dari GET /api/v1/users (Active Users Table)
@@ -43,4 +43,10 @@ export interface UserManagementStatsResponse {
   total_users: number
   active_users: number
   inactive_users: number
+}
+
+export interface UpdateUserPayload {
+  full_name?: string
+  role_id?: string
+  is_active?: boolean
 }

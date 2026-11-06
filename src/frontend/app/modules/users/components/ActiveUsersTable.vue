@@ -30,13 +30,8 @@ const getActionItems = (user: UserItem) => [
     {
       label: 'Edit',
       icon: 'i-lucide-pencil',
+      class: 'cursor-pointer',
       onSelect: () => emit('edit', user)
-    },
-    {
-      label: 'Delete',
-      icon: 'i-lucide-trash-2',
-      color: 'error' as const,
-      onSelect: () => emit('delete', user)
     }
   ]
 ]
@@ -106,7 +101,7 @@ const getRoleBadgeClass = (roleName?: string | null) => {
       class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between border-b border-slate-100 pb-3"
     >
       <div>
-        <h2 class="text-xs font-bold text-slate-900 tracking-tight">Users</h2>
+        <h2 class="text-[15px] font-bold text-slate-900 tracking-tight">Users</h2>
         <p class="text-[11px] text-slate-400">List of users with assigned roles.</p>
       </div>
 

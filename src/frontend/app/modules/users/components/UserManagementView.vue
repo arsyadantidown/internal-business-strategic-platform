@@ -1,20 +1,69 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import type { UserStats, PendingUserRequest, ActiveUser, UserRole } from '../types/types'
 
+import RequestHistoryTable from './RequestHistoryTable.vue'
+import RequestHistoryDetailModal from './RequestHistoryDetailModal.vue'
 import UsersStatsCards from './UsersStatsCards.vue'
 import PendingRequestsTable from './PendingRequestsTable.vue'
 import ActiveUsersTable from './ActiveUsersTable.vue'
 import AssignRoleModal from './AssignRoleModal.vue'
+import EditUserModal from './EditUserModal.vue'
 
 import { useUserStore } from '../stores/user.store.ts'
 import { useRoleStore } from '~/modules/roles/stores/role.store'
 
 import type { RoleRequestItem } from '~/modules/roles/types/role.types'
+import type { UserItem, UpdateUserPayload } from '../types/types'
 
 const toast = useToast()
 const userStore = useUserStore()
 const roleStore = useRoleStore()
+
+const isHistoryDetailOpen = ref(false)
+const selectedHistoryItem = ref<RoleRequestItem | null>(null)
+const handleViewHistoryDetail = (item: RoleRequestItem) => {
+  selectedHistoryItem.value = item
+  isHistoryDetailOpen.value = true
+}
+const handleHistoryFilterChange = (payload: { status?: 'approved' | 'rejected'; page: number }) => {
+  roleStore.fetchHistoryRequests({
+    status: payload.status,
+    page: payload.page,
+    pageSize: 5
+  })
+}
+
+// State Modal Edit User
+const isEditModalOpen = ref(false)
+const selectedUserForEdit = ref<UserItem | null>(null)
+
+const handleEditUser = (user: UserItem) => {
+  selectedUserForEdit.value = user
+  isEditModalOpen.value = true
+}
+
+const handleSaveEditUser = async (payload: { userId: string; data: UpdateUserPayload }) => {
+  try {
+    const res = await userStore.updateUser(payload.userId, payload.data)
+    toast.add({
+      title: 'User Updated',
+      description: res.message || 'User has been successfully updated.',
+      color: 'success'
+    })
+    isEditModalOpen.value = false
+    // Refresh KPI Stats & Tabel Users
+    await Promise.all([
+      userStore.fetchManagementStats(),
+      userStore.fetchUsers({ page: userStore.usersPagination.page, pageSize: 5 })
+    ])
+  } catch (err: any) {
+    toast.add({
+      title: 'Update Failed',
+      description: err?.response?.data?.message || err?.message || 'Failed to update user.',
+      color: 'error'
+    })
+  }
+}
 
 // State Modal Review & Assign Role
 const isAssignModalOpen = ref(false)
@@ -42,7 +91,8 @@ const handleApproveRequest = async (payload: { requestId: string; reviewNotes: s
     // Refresh KPI Stats & Tabel Pending
     await Promise.all([
       userStore.fetchManagementStats(),
-      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10)
+      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 5),
+      roleStore.fetchHistoryRequests()
     ])
   } catch (err: any) {
     toast.add({
@@ -69,7 +119,8 @@ const handleRejectRequest = async (payload: { requestId: string; reviewNotes: st
     // Refresh KPI Stats & Tabel Pending
     await Promise.all([
       userStore.fetchManagementStats(),
-      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 10)
+      roleStore.fetchPendingRequests(roleStore.pendingPagination.page, 5),
+      roleStore.fetchHistoryRequests()
     ])
   } catch (err: any) {
     toast.add({
@@ -89,7 +140,7 @@ const handleUserFilterChange = (filter: {
 }) => {
   userStore.fetchUsers({
     page: filter.page,
-    pageSize: 10,
+    pageSize: 5,
     search: filter.search || undefined,
     // Jangan kirim __NO_ROLE__ ke backend karena butuh UUID
     roleId: filter.roleId && filter.roleId !== '__NO_ROLE__' ? filter.roleId : undefined,
@@ -101,13 +152,14 @@ const handleManageUser = (user: ActiveUser) => {
 }
 
 const handlePageChange = (page: number) => {
-  roleStore.fetchPendingRequests(page, 10)
+  roleStore.fetchPendingRequests(page, 5)
 }
 onMounted(() => {
   userStore.fetchManagementStats()
-  roleStore.fetchPendingRequests(1, 10)
+  roleStore.fetchPendingRequests(1, 5)
   roleStore.fetchRoles()
-  userStore.fetchUsers({ page: 1, pageSize: 10 })
+  userStore.fetchUsers({ page: 1, pageSize: 5 })
+  roleStore.fetchHistoryRequests({ page: 1, pageSize: 5 })
 })
 </script>
 
@@ -148,6 +200,14 @@ onMounted(() => {
       :is-loading="userStore.isLoadingUsers"
       @filter-change="handleUserFilterChange"
       @manage-user="handleManageUser"
+      @edit="handleEditUser"
+    />
+    <RequestHistoryTable
+      :requests="roleStore.historyRequests"
+      :pagination="roleStore.historyPagination"
+      :is-loading="roleStore.isLoadingHistory"
+      @filter-change="handleHistoryFilterChange"
+      @view-detail="handleViewHistoryDetail"
     />
     <!-- 4. Modal Popup Review Role Request (Approve & Reject) -->
     <AssignRoleModal
@@ -157,6 +217,21 @@ onMounted(() => {
       @close="isAssignModalOpen = false"
       @approve="handleApproveRequest"
       @reject="handleRejectRequest"
+    />
+    <RequestHistoryDetailModal
+      :is-open="isHistoryDetailOpen"
+      :request="selectedHistoryItem"
+      @close="isHistoryDetailOpen = false"
+    />
+
+    <!-- Modal Edit User -->
+    <EditUserModal
+      :is-open="isEditModalOpen"
+      :user="selectedUserForEdit"
+      :roles="roleStore.roles"
+      :is-submitting="userStore.isUpdating"
+      @close="isEditModalOpen = false"
+      @submit="handleSaveEditUser"
     />
   </div>
 </template>

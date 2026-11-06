@@ -33,8 +33,8 @@ export interface RoleRequestItem {
 export interface ApiPagination {
   page: number
   page_size: number
-  total: number
-  total_pages: number
+  total?: number
+  total_pages?: number
 }
 
 export interface RoleRequestQueryParams {
