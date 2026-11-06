@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { PermissionItem } from '../types/types'
 
 interface Props {
@@ -15,6 +16,9 @@ const emit = defineEmits<{
   (e: 'add-permission'): void
   (e: 'edit-permission', permission: PermissionItem): void
 }>()
+
+const currentPage = ref(1)
+const totalPages = ref(1)
 </script>
 
 <template>
@@ -61,22 +65,22 @@ const emit = defineEmits<{
             :key="item.id"
             class="hover:bg-slate-50/60 transition-colors"
           >
-            <!-- Name -->
+            <!-- Permission Name -->
             <td class="py-3.5 pr-4 whitespace-nowrap font-bold text-slate-900">
               {{ item.name }}
             </td>
 
-            <!-- Code Badge (Pastel Purple/Indigo) -->
+            <!-- Code Badge (Pastel Blue) -->
             <td class="px-4 py-3.5 whitespace-nowrap">
               <span
-                class="inline-flex items-center rounded-md bg-[#EEF2FF] px-2.5 py-1 text-[11px] font-semibold text-[#6366F1]"
+                class="inline-flex items-center rounded-md bg-[#EDF3FF] px-2.5 py-1 text-[11px] font-semibold text-[#3B82F6]"
               >
                 {{ item.code }}
               </span>
             </td>
 
             <!-- Description -->
-            <td class="px-4 py-3.5 max-w-sm truncate text-slate-600" :title="item.description">
+            <td class="px-4 py-3.5 max-w-md truncate text-slate-600" :title="item.description">
               {{ item.description }}
             </td>
 
@@ -99,8 +103,8 @@ const emit = defineEmits<{
     <!-- Bottom Pagination -->
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
       <p class="text-[11px] text-slate-400">
-        Showing <span class="font-bold text-slate-700">1 to 5</span> of
-        <span class="font-bold text-slate-700">6</span> results
+        Showing <span class="font-bold text-slate-700">1 to {{ permissions.length }}</span> of
+        <span class="font-bold text-slate-700">{{ permissions.length }}</span> results
       </p>
 
       <div class="flex items-center gap-1">

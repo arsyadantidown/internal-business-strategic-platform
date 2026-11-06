@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import type { RoleItem } from '~/modules/roles/types/role.types'
 
 interface Props {
@@ -16,6 +17,9 @@ const emit = defineEmits<{
   (e: 'view-role', role: RoleItem): void
   (e: 'edit-role', role: RoleItem): void
 }>()
+
+const currentPage = ref(1)
+const totalPages = ref(4)
 </script>
 
 <template>
@@ -124,8 +128,8 @@ const emit = defineEmits<{
     <!-- Bottom Pagination -->
     <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
       <p class="text-[11px] text-slate-400">
-        Showing <span class="font-bold text-slate-700">1 to 3</span> of
-        <span class="font-bold text-slate-700">12</span> results
+        Showing <span class="font-bold text-slate-700">1 to {{ roles.length }}</span> of
+        <span class="font-bold text-slate-700">{{ roles.length }}</span> results
       </p>
 
       <div class="flex items-center gap-1">

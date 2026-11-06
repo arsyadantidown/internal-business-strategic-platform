@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import type { RoleTableItem } from '../types/types'
+import type { RoleItem } from '~/modules/roles/types/role.types'
+import type { UpdateRolePayload } from '../types/types'
 
 interface Props {
   isOpen: boolean
-  role: RoleTableItem | null
+  role: RoleItem | null
   isSubmitting?: boolean
 }
 
@@ -14,16 +15,10 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (
-    e: 'submit',
-    payload: {
-      roleId: string
-      data: { name?: string; description?: string; is_active?: boolean }
-    }
-  ): void
+  (e: 'submit', payload: { roleId: string; data: UpdateRolePayload }): void
 }>()
 
-// Checkbox pengaman (enable input saat dicentang)
+// Checkbox pengaman
 const enableName = ref(false)
 const enableDescription = ref(false)
 const enableStatus = ref(false)
@@ -44,7 +39,7 @@ watch(
 
       formName.value = props.role.name || ''
       formDescription.value = props.role.description || ''
-      formIsActive.value = props.role.status === 'Active'
+      formIsActive.value = props.role.is_active ?? true
     }
   }
 )
@@ -52,13 +47,13 @@ watch(
 const handleSubmit = () => {
   if (!props.role) return
 
-  const payload: { name?: string; description?: string; is_active?: boolean } = {}
+  const payload: UpdateRolePayload = {}
 
   if (enableName.value && formName.value.trim()) {
     payload.name = formName.value.trim()
   }
-  if (enableDescription.value && formDescription.value.trim()) {
-    payload.description = formDescription.value.trim()
+  if (enableDescription.value) {
+    payload.description = formDescription.value.trim() || undefined
   }
   if (enableStatus.value) {
     payload.is_active = formIsActive.value
@@ -73,7 +68,6 @@ const handleSubmit = () => {
   })
 }
 
-// Cek apakah minimal ada 1 perubahan yang diaktifkan
 const hasAnyEnabled = computed(() => {
   return enableName.value || enableDescription.value || enableStatus.value
 })

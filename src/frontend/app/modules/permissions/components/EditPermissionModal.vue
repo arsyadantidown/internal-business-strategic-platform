@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import type { PermissionTableItem } from '../types/types'
+import type { PermissionItem, UpdatePermissionPayload } from '../types/types'
 
 interface Props {
   isOpen: boolean
-  permission: PermissionTableItem | null
+  permission: PermissionItem | null
   isSubmitting?: boolean
 }
 
@@ -18,7 +18,7 @@ const emit = defineEmits<{
     e: 'submit',
     payload: {
       permissionId: string
-      data: { name?: string; description?: string }
+      data: UpdatePermissionPayload
     }
   ): void
 }>()
@@ -48,7 +48,7 @@ watch(
 const handleSubmit = () => {
   if (!props.permission) return
 
-  const payload: { name?: string; description?: string } = {}
+  const payload: UpdatePermissionPayload = {}
 
   if (enableName.value && formName.value.trim()) {
     payload.name = formName.value.trim()

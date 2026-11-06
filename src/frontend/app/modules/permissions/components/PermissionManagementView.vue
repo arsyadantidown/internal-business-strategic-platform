@@ -2,12 +2,14 @@
 import { ref, onMounted } from 'vue'
 import RoleManagementTable from './RoleManagementTable.vue'
 import PermissionListTable from './PermissionListTable.vue'
-import type { RoleTableItem, PermissionTableItem } from '../types/types'
+import type { RoleItem } from '~/modules/roles/types/role.types'
+import type { PermissionItem, UpdateRolePayload, UpdatePermissionPayload } from '../types/types'
 import EditPermissionModal from './EditPermissionModal.vue'
 import EditRoleModal from './EditRoleModal.vue'
 
 import { usePermissionStore } from '../stores/permission.store'
 
+const toast = useToast()
 const permissionStore = usePermissionStore()
 onMounted(async () => {
   // Panggil kedua API saat halaman pertama kali dimuat
@@ -17,41 +19,64 @@ onMounted(async () => {
 const activeTab = ref<'roles' | 'permissions'>('roles')
 
 const isEditRoleModalOpen = ref(false)
-const selectedRoleForEdit = ref<RoleTableItem | null>(null)
+const selectedRoleForEdit = ref<RoleItem | null>(null)
 
 // State Modal Edit Permission
 const isEditPermissionModalOpen = ref(false)
-const selectedPermissionForEdit = ref<PermissionTableItem | null>(null)
+const selectedPermissionForEdit = ref<PermissionItem | null>(null)
 // Saat ikon pensil di tabel permission diklik
-const handleEditPermission = (permission: PermissionTableItem) => {
+const handleEditPermission = (permission: PermissionItem) => {
   selectedPermissionForEdit.value = permission
   isEditPermissionModalOpen.value = true
 }
 // Saat tombol Save Changes di modal diklik (sementara alert dulu)
-const handleSaveEditPermission = (payload: { permissionId: string; data: any }) => {
+const handleSaveEditPermission = (payload: { permissionId: string; data: UpdatePermissionPayload }) => {
   console.log('Save permission payload:', payload)
   alert(`Permission "${selectedPermissionForEdit.value?.name}" saved successfully (Dummy)!`)
   isEditPermissionModalOpen.value = false
 }
 
-// Saat ikon pensil di baris tabel diklik
-const handleEditRole = (role: RoleTableItem) => {
-  selectedRoleForEdit.value = role
-  isEditRoleModalOpen.value = true
+// 1. Saat tombol pensil diklik -> panggil API Detail Role (No. 2)
+const handleEditRole = async (role: RoleItem) => {
+  try {
+    const detail = await permissionStore.fetchRoleDetail(role.id)
+    selectedRoleForEdit.value = detail || role
+    isEditRoleModalOpen.value = true
+  } catch (err: any) {
+    toast.add({
+      title: 'Failed to Fetch Role',
+      description: err?.response?.data?.message || err?.message || 'Could not load role details.',
+      color: 'error'
+    })
+  }
 }
-// Saat tombol Save Changes di modal diklik (sementara alert dulu)
-const handleSaveEditRole = (payload: { roleId: string; data: any }) => {
-  console.log('Save role payload:', payload)
-  alert(`Role "${selectedRoleForEdit.value?.name}" saved successfully (Dummy)!`)
-  isEditRoleModalOpen.value = false
+// 2. Saat klik Save Changes di modal -> panggil API Patch Role (No. 3)
+const handleSaveEditRole = async (payload: { roleId: string; data: UpdateRolePayload }) => {
+  try {
+    const res = await permissionStore.updateRole(payload.roleId, payload.data)
+    toast.add({
+      title: 'Role Updated',
+      description: res.message || 'Role has been successfully updated.',
+      color: 'success'
+    })
+    isEditRoleModalOpen.value = false
+    // Refresh daftar roles
+    await permissionStore.fetchRoles(true)
+  } catch (err: any) {
+    toast.add({
+      title: 'Update Failed',
+      description: err?.response?.data?.message || err?.message || 'Failed to update role.',
+      color: 'error'
+    })
+  }
 }
 
-// Handler Dummy Actions
+// Handler Actions
 const handleAddRole = () => {
   alert('Modal Add Role will be opened')
 }
 
-const handleViewRole = (role: RoleTableItem) => {
+const handleViewRole = (role: RoleItem) => {
   navigateTo(`/admin/permission/roles/${role.id}`)
 }
 
@@ -132,10 +157,10 @@ const handleAddPermission = () => {
         @edit-permission="handleEditPermission"
       />
 
-      <!-- Modal Edit Role -->
       <EditRoleModal
         :is-open="isEditRoleModalOpen"
         :role="selectedRoleForEdit"
+        :is-submitting="permissionStore.isUpdatingRole"
         @close="isEditRoleModalOpen = false"
         @submit="handleSaveEditRole"
       />
