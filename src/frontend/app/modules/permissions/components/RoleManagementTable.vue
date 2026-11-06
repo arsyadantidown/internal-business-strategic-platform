@@ -17,9 +17,6 @@ const emit = defineEmits<{
   (e: 'view-role', role: RoleItem): void
   (e: 'edit-role', role: RoleItem): void
 }>()
-
-const currentPage = ref(1)
-const totalPages = ref(4)
 </script>
 
 <template>
@@ -125,47 +122,11 @@ const totalPages = ref(4)
       </table>
     </div>
 
-    <!-- Bottom Pagination -->
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pt-2">
+    <!-- Bottom Total Count (Tanpa Pagination) -->
+    <div class="flex items-center justify-between pt-2 border-t border-slate-100">
       <p class="text-[11px] text-slate-400">
-        Showing <span class="font-bold text-slate-700">1 to {{ roles.length }}</span> of
-        <span class="font-bold text-slate-700">{{ roles.length }}</span> results
+        Total <span class="font-bold text-slate-700">{{ roles.length }}</span> roles
       </p>
-
-      <div class="flex items-center gap-1">
-        <button
-          type="button"
-          class="flex h-6.5 w-6.5 items-center justify-center rounded-md border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
-          :disabled="currentPage <= 1"
-          @click="currentPage--"
-        >
-          <UIcon name="i-lucide-chevron-left" class="h-3 w-3" />
-        </button>
-
-        <button
-          v-for="p in totalPages"
-          :key="p"
-          type="button"
-          class="flex h-6.5 w-6.5 items-center justify-center rounded-md text-[11px] font-bold cursor-pointer"
-          :class="[
-            currentPage === p
-              ? 'bg-blue-600 text-white shadow-2xs'
-              : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
-          ]"
-          @click="currentPage = p"
-        >
-          {{ p }}
-        </button>
-
-        <button
-          type="button"
-          class="flex h-6.5 w-6.5 items-center justify-center rounded-md border border-slate-200 text-slate-400 hover:bg-slate-50 disabled:opacity-40 cursor-pointer"
-          :disabled="currentPage >= totalPages"
-          @click="currentPage++"
-        >
-          <UIcon name="i-lucide-chevron-right" class="h-3 w-3" />
-        </button>
-      </div>
     </div>
   </div>
 </template>
