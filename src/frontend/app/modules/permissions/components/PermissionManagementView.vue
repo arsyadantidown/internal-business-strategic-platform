@@ -3,9 +3,15 @@ import { ref, onMounted } from 'vue'
 import RoleManagementTable from './RoleManagementTable.vue'
 import PermissionListTable from './PermissionListTable.vue'
 import type { RoleItem } from '~/modules/roles/types/role.types'
-import type { PermissionItem, UpdateRolePayload, UpdatePermissionPayload } from '../types/types'
+import type {
+  PermissionItem,
+  UpdateRolePayload,
+  UpdatePermissionPayload,
+  CreateRolePayload
+} from '../types/types'
 import EditPermissionModal from './EditPermissionModal.vue'
 import EditRoleModal from './EditRoleModal.vue'
+import AddRoleModal from './AddRoleModal.vue'
 
 import { usePermissionStore } from '../stores/permission.store'
 
@@ -17,7 +23,7 @@ onMounted(async () => {
 })
 // State Tab Aktif ('roles' atau 'permissions')
 const activeTab = ref<'roles' | 'permissions'>('roles')
-
+const isAddRoleModalOpen = ref(false)
 const isEditRoleModalOpen = ref(false)
 const selectedRoleForEdit = ref<RoleItem | null>(null)
 
@@ -89,7 +95,26 @@ const handleSaveEditRole = async (payload: { roleId: string; data: UpdateRolePay
 
 // Handler Actions
 const handleAddRole = () => {
-  alert('Modal Add Role will be opened')
+  isAddRoleModalOpen.value = true
+}
+const handleSaveAddRole = async (payload: CreateRolePayload) => {
+  try {
+    const res = await permissionStore.createRole(payload)
+    toast.add({
+      title: 'Role Created',
+      description: res.message || 'Role has been successfully created.',
+      color: 'success'
+    })
+    isAddRoleModalOpen.value = false
+    // Refresh list role dari server
+    await permissionStore.fetchRoles(true)
+  } catch (err: any) {
+    toast.add({
+      title: 'Creation Failed',
+      description: err?.response?.data?.message || err?.message || 'Failed to create role.',
+      color: 'error'
+    })
+  }
 }
 
 const handleViewRole = (role: RoleItem) => {
@@ -188,6 +213,13 @@ const handleAddPermission = () => {
         :is-submitting="permissionStore.isUpdatingPermission"
         @close="isEditPermissionModalOpen = false"
         @submit="handleSaveEditPermission"
+      />
+      <!-- Modal Add Role -->
+      <AddRoleModal
+        :is-open="isAddRoleModalOpen"
+        :is-submitting="permissionStore.isCreatingRole"
+        @close="isAddRoleModalOpen = false"
+        @submit="handleSaveAddRole"
       />
     </div>
   </div>

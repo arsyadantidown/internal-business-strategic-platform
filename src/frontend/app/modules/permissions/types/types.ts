@@ -29,3 +29,9 @@ export interface UpdatePermissionPayload {
 export interface SetRolePermissionsPayload {
   permission_ids: string[]
 }
+
+export interface CreateRolePayload {
+  name: string
+  code: string
+  description?: string
+}

@@ -5,7 +5,8 @@ import type {
   RoleDetailResponse,
   UpdateRolePayload,
   UpdatePermissionPayload,
-  SetRolePermissionsPayload
+  SetRolePermissionsPayload,
+  CreateRolePayload
 } from '../types/types'
 import type { RoleItem } from '~/modules/roles/types/role.types'
 
@@ -80,6 +81,15 @@ export const permissionApi = {
     data: PermissionItem
   }> {
     const response = await apiClient.patch(`${ENDPOINTS.PERMISSIONS.BASE}/${permissionId}`, payload)
+    return response.data
+  },
+
+  async createRole(payload: CreateRolePayload): Promise<{
+    success: boolean
+    message: string
+    data: RoleItem
+  }> {
+    const response = await apiClient.post(ENDPOINTS.ROLES.BASE, payload)
     return response.data
   }
 }

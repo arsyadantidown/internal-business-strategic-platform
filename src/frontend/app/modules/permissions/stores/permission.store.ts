@@ -6,7 +6,8 @@ import type {
   RoleDetailResponse,
   UpdateRolePayload,
   UpdatePermissionPayload,
-  SetRolePermissionsPayload
+  SetRolePermissionsPayload,
+  CreateRolePayload
 } from '../types/types'
 import type { RoleItem } from '~/modules/roles/types/role.types'
 
@@ -21,6 +22,7 @@ export const usePermissionStore = defineStore('permission', () => {
   const isFetchingDetail = ref(false)
   const isUpdatingRole = ref(false)
   const isSavingRolePermissions = ref(false)
+  const isCreatingRole = ref(false)
 
   const fetchRoles = async (includeInactive = true) => {
     isLoadingRoles.value = true
@@ -118,6 +120,23 @@ export const usePermissionStore = defineStore('permission', () => {
     }
   }
 
+  const createRole = async (payload: CreateRolePayload) => {
+    isCreatingRole.value = true
+    try {
+      const res = await permissionApi.createRole(payload)
+      // Tambahkan role baru ke list lokal di posisi teratas
+      if (res.data) {
+        roles.value.unshift(res.data)
+      }
+      return res
+    } catch (err) {
+      console.error('Failed to create role:', err)
+      throw err
+    } finally {
+      isCreatingRole.value = false
+    }
+  }
+
   return {
     roles,
     isLoadingRoles,
@@ -132,6 +151,8 @@ export const usePermissionStore = defineStore('permission', () => {
     isUpdatingPermission,
     updatePermission,
     isSavingRolePermissions,
-    setRolePermissions
+    setRolePermissions,
+    isCreatingRole,
+    createRole
   }
 })
