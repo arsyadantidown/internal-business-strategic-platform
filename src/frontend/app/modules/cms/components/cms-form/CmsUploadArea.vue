@@ -52,7 +52,7 @@ const handleDrop = (event: DragEvent) => {
   <div
     role="button"
     tabindex="0"
-    class="group flex cursor-pointer rounded-xl border border-dashed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+    class="group flex cursor-pointer rounded-xl border border-dashed transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/30 relative"
     :class="[
       isDragging
         ? 'border-blue-400 bg-blue-50/70'

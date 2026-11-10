@@ -19,6 +19,7 @@ import {
   cmsTechnologyOptions
 } from '../../data/cms.data'
 import { stripCmsHtml } from '../../utils/cmsFormat'
+import { scrollCmsSectionIntoView } from '../../utils/cmsScroll'
 import { cmsControlClass, cmsControlStateClass } from '../../utils/cmsForm'
 import CmsFormField from './CmsFormField.vue'
 import CmsFormSection from './CmsFormSection.vue'
@@ -168,12 +169,19 @@ const showToast = (
   toast.add({ title, description, color })
 }
 
+const openAndScrollToSection = async (id: string) => {
+  openSections[id] = true
+  await nextTick()
+  scrollCmsSectionIntoView(id)
+}
+
 const scrollToSection = async (id: string) => {
   activeSection.value = id
-  openSections[id] = true
-  if (!import.meta.client) return
-  await nextTick()
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  if (openSections[id]) {
+    openSections[id] = false
+    return
+  }
+  await openAndScrollToSection(id)
 }
 
 const addTag = () => {
