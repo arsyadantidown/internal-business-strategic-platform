@@ -1,8 +1,4 @@
-export type ProjectStatus
-  = | 'On Going'
-    | 'On Proposal'
-    | 'Closed'
-    | 'Canceled'
+export type ProjectStatus = 'On Going' | 'On Proposal' | 'Closed' | 'Canceled'
 
 export type PortfolioOption = {
   label: string
@@ -89,4 +85,23 @@ export interface ProjectDetailItem extends ProjectItem {
   documents: ProjectDocument[]
   partners: RelatedPartner[]
   lastUpdated?: string
+}
+
+export type MasterDataType =
+  | 'company-sizes'
+  | 'customer-types'
+  | 'industries'
+  | 'legal-structures'
+  | 'business-units'
+  | 'project-statuses'
+  | 'product-statuses'
+export interface MasterDataItem {
+  id: string
+  code?: string
+  name?: string
+  description?: string | null
+  sort_order?: number
+  is_active?: boolean
+  // Fleksibel menangani prefix backend (contoh: industry_name, company_size_name, dsb)
+  [key: string]: any
 }
