@@ -27,5 +27,8 @@ export const ENDPOINTS = {
   },
   PERMISSIONS: {
     BASE: '/api/v1/permissions'
+  },
+  MASTER_DATA: {
+    BASE: '/api/v1/master-data'
   }
 } as const
