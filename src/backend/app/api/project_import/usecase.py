@@ -99,6 +99,21 @@ class ProjectImportUseCase:
         for row in preview["rows"]:
             data = row["data"]
             errors = row["errors"]
+            # Preview has names rather than persisted partner IDs. Validate them
+            # with the same schema used by confirm before building project data.
+            for partner in data.get("partners", []):
+                try:
+                    PartnerCreateRequest(partner_name=partner["partner_name"])
+                except ValidationError as exc:
+                    for item in exc.errors(include_input=False, include_context=False):
+                        error = {
+                            "field": ".".join(str(part) for part in item["loc"]),
+                            "code": item["type"],
+                            "message": item["msg"],
+                        }
+                        if error not in errors:
+                            errors.append(error)
+
             try:
                 _project_payload(data)
             except ValidationError as exc:

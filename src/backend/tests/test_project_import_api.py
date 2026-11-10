@@ -719,3 +719,75 @@ async def test_preview_rejects_inactive_tech_stack(client, admin, refs, db):
         await db.refresh(item)
         item.is_active = original_active
         await db.commit()
+
+
+@pytest.mark.parametrize("row_count, invalid_index", [(1, 0), (10, 4)])
+async def test_partner_name_too_long_invalidates_preview_and_confirm(
+    client, admin, db, row_count, invalid_index
+):
+    before = await import_record_counts(db)
+    rows = [
+        {"Project ID": f"PARTNER_LENGTH_{index}", "Partner": f"Vendor: Pending {uuid4().hex}"}
+        for index in range(row_count)
+    ]
+    rows[invalid_index]["Partner"] = "Vendor: " + "P" * 201
+    content = import_workbook(rows)
+    response = await upload_import(client, admin, content, url=PREVIEW_URL)
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert (data["total_rows"], data["valid_rows"], data["invalid_rows"]) == (
+        row_count, row_count - 1, 1,
+    )
+    expected_error = {
+        "field": "partner_name",
+        "code": "string_too_long",
+        "message": "String should have at most 200 characters",
+    }
+    for index, row in enumerate(data["rows"]):
+        assert row["row"] == index + 3
+        assert row["valid"] is (index != invalid_index)
+        assert row["errors"] == ([expected_error] if index == invalid_index else [])
+    assert await import_record_counts(db) == before
+
+    response = await upload_import(client, admin, content)
+    assert response.status_code == 422, response.text
+    assert response.json()["error"] == {
+        "code": "IMPORT_VALIDATION_ERROR",
+        "details": {"rows": [{"row": invalid_index + 3, "errors": [expected_error]}]},
+    }
+    assert await import_record_counts(db) == before
+
+
+@pytest.mark.parametrize("length", [199, 200])
+async def test_partner_name_valid_length_previews_and_imports(client, admin, db, length):
+    name = uuid4().hex + "P" * (length - 32)
+    # Limits apply to the normalized name, not surrounding whitespace or role.
+    content = import_workbook([{"Partner": f"Principal:   {name}   "}])
+    before = await import_record_counts(db)
+    response = await upload_import(client, admin, content, url=PREVIEW_URL)
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert (data["valid_rows"], data["invalid_rows"]) == (1, 0)
+    assert data["rows"][0]["valid"] is True
+    assert data["rows"][0]["errors"] == []
+    assert data["rows"][0]["data"]["partners"][0]["partner_name"] == name
+    assert await import_record_counts(db) == before
+
+    response = await upload_import(client, admin, content)
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["imported_count"] == 1
+    partner = (await db.execute(select(Partner).where(Partner.partner_name == name))).scalar_one()
+    link = (await db.execute(select(ProjectPartner))).scalar_one()
+    assert link.partner_id == partner.id
+    assert link.partner_role == "principal"
+
+
+async def test_partner_name_errors_preserve_other_errors_without_duplicates(client, admin, db):
+    name = "P" * 201
+    row = await assert_invalid_preview_and_confirm(
+        client, admin, db,
+        {"Project Name": None, "Partner": f"Principal: {name}, Vendor: {name}"},
+        "partner_name",
+    )
+    assert len(row["errors"]) == 2
+    assert {error["code"] for error in row["errors"]} == {"REQUIRED_FIELD", "string_too_long"}
