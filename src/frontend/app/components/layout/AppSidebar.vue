@@ -81,7 +81,10 @@ const navigationSections: NavigationSection[] = [
         children: [
           { label: 'Portfolio Content', to: '/admin/content/portfolio' },
           { label: 'Partnership Content', to: '/admin/content/partnership' },
-          { label: 'Partnership Workflow', to: '/admin/content/workflow' }
+          { label: 'Partnership Workflow', to: '/admin/content/workflow' },
+          { label: 'Master Data', to: '/admin/content/master-data' },
+          { label: 'Tech Task', to: '/admin/content/tech-task' },
+          { label: 'Partner', to: '/admin/content/partner' }
         ]
       },
       {
