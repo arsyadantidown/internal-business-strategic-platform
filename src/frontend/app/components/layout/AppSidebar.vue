@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, computed, watchEffect } from 'vue'
+import { useRbac } from '~/composables/useRbac'
 
 interface SubMenuItem {
   label: string
   to: string
+  permission?: string
 }
 
 interface MenuItem {
@@ -12,6 +14,7 @@ interface MenuItem {
   icon: string
   to?: string
   badge?: string | number
+  permission?: string
   children?: SubMenuItem[]
 }
 
@@ -30,6 +33,9 @@ const isMenuActive = (targetTo?: string): boolean => {
   }
   return route.path === targetTo || route.path.startsWith(`${targetTo}/`)
 }
+
+const { can } = useRbac()
+
 // 1. Data Navigation Schema (Single Source of Truth)
 const navigationSections: NavigationSection[] = [
   {
@@ -43,6 +49,7 @@ const navigationSections: NavigationSection[] = [
         key: 'portfolio',
         label: 'Portfolio',
         icon: 'i-lucide-briefcase',
+        permission: 'portfolio.view',
         children: [
           { label: 'Portfolio Directory', to: '/portofolio' },
           { label: 'My Projects', to: '/portofolio/my-projects' }
@@ -79,7 +86,11 @@ const navigationSections: NavigationSection[] = [
         label: 'Content Management',
         icon: 'i-lucide-file-text',
         children: [
-          { label: 'Portfolio Content', to: '/admin/content/portfolio' },
+          {
+            label: 'Portfolio Content',
+            to: '/admin/content/portfolio',
+            permission: 'portfolio.manage'
+          },
           { label: 'Partnership Content', to: '/admin/content/partnership' },
           { label: 'Partnership Workflow', to: '/admin/content/workflow' }
         ]
@@ -87,7 +98,8 @@ const navigationSections: NavigationSection[] = [
       {
         label: 'User Management',
         icon: 'i-lucide-users',
-        to: '/admin/users'
+        to: '/admin/users',
+        permission: 'user.manage'
       },
       {
         label: 'Audit Log',
@@ -97,7 +109,8 @@ const navigationSections: NavigationSection[] = [
       {
         label: 'Permission',
         icon: 'i-lucide-shield-check',
-        to: '/admin/permission'
+        to: '/admin/permission',
+        permission: 'role.manage'
       },
       {
         label: 'Settings',
@@ -107,6 +120,45 @@ const navigationSections: NavigationSection[] = [
     ]
   }
 ]
+// Filter dinamis berdasarkan permission user
+const filteredNavigationSections = computed<NavigationSection[]>(() => {
+  return navigationSections
+    .map((section) => {
+      const allowedItems = section.items
+        .filter((item) => {
+          // 1. Cek permission menu utama
+          if (item.permission && !can(item.permission)) return false
+
+          // 2. Jika menu punya dropdown children, cek apakah ada children yang boleh tampil
+          if (item.children) {
+            const visibleChildren = item.children.filter(
+              (child) => !child.permission || can(child.permission)
+            )
+            // Jika semua child tersembunyi, hide juga menu parent-nya
+            if (visibleChildren.length === 0) return false
+            return true
+          }
+
+          return true
+        })
+        .map((item) => {
+          // Saring anak-anak yang boleh tampil
+          if (item.children) {
+            return {
+              ...item,
+              children: item.children.filter((child) => !child.permission || can(child.permission))
+            }
+          }
+          return item
+        })
+
+      return {
+        ...section,
+        items: allowedItems
+      }
+    })
+    .filter((section) => section.items.length > 0) // Sembunyikan section jika semua itemnya kosong
+})
 
 // 2. Generic Helper: Cek apakah route saat ini adalah child dari sebuah menu
 const isChildActive = (children?: SubMenuItem[]): boolean => {
@@ -123,7 +175,7 @@ const toggleMenu = (key: string) => {
 
 // 4. Auto-sync State: Buka dropdown secara reaktif jika salah satu child aktif
 watchEffect(() => {
-  navigationSections.forEach((section) => {
+  filteredNavigationSections.value.forEach((section) => {
     section.items.forEach((item) => {
       if (item.key && item.children && isChildActive(item.children)) {
         openMenus.value[item.key] = true
@@ -149,7 +201,7 @@ watchEffect(() => {
 
     <!-- Navigation List (Scrollable Area) -->
     <div class="flex-1 overflow-y-auto px-3 py-4 space-y-6 custom-scrollbar">
-      <div v-for="(section, secIdx) in navigationSections" :key="secIdx" class="space-y-2">
+      <div v-for="(section, idx) in filteredNavigationSections" :key="idx" class="space-y-2">
         <!-- Section Header (Optional) -->
         <p
           v-if="section.title"
