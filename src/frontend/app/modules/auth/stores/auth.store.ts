@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { authApi } from '../api/auth.api'
+import { permissionApi } from '~/modules/permissions/api/permission.api'
 import type { RegisterPayload, LoginPayload } from '../types/auth.types'
 
 export const useAuthStore = defineStore('auth', () => {
@@ -19,6 +20,40 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setPendingEmail = (email: string) => {
     pendingEmail.value = email
+  }
+
+  const userPermissions = ref<string[]>([])
+  const isLoadingPermissions = ref<boolean>(false)
+
+  const hasPermission = (permissionCode?: string): boolean => {
+    if (!permissionCode) return true // Jika menu tidak memerlukan permission khusus, izinkan
+    return userPermissions.value.includes(permissionCode)
+  }
+
+  /**
+   * Mengambil detail permissions berdasarkan role_id user saat ini
+   */
+  const fetchUserPermissions = async () => {
+    const roleId = user.value?.role_id
+    if (!roleId) {
+      userPermissions.value = []
+      return []
+    }
+
+    isLoadingPermissions.value = true
+    try {
+      const res = await permissionApi.getRoleDetail(roleId)
+      // Ekstrak array kode permission (string)
+      const perms = res.data?.permissions?.map((p: any) => p.code) || []
+      userPermissions.value = perms
+      return perms
+    } catch (err) {
+      console.error('Failed to fetch user permissions:', err)
+      userPermissions.value = []
+      return []
+    } finally {
+      isLoadingPermissions.value = false
+    }
   }
 
   /**
@@ -237,6 +272,7 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = null
     user.value = null
     pendingEmail.value = ''
+    userPermissions.value = []
   }
 
   const logout = async () => {
@@ -257,6 +293,7 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await authApi.getMe()
       if (res.data) {
         user.value = res.data
+        await fetchUserPermissions()
       }
       return res.data
     } catch (err) {
@@ -285,6 +322,9 @@ export const useAuthStore = defineStore('auth', () => {
     resetPassword,
     clearAuth,
     logout,
-    fetchCurrentUser
+    fetchCurrentUser,
+    userPermissions,
+    hasPermission,
+    fetchUserPermissions
   }
 })
