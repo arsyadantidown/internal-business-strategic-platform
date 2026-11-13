@@ -4,13 +4,7 @@ import type { PortfolioFilterState, PortfolioOption } from '../../types/types'
 
 import { useMasterDataStore } from '../../stores/master-data.store'
 // Opsi non-master-data tetap diambil dari file options (stacks, products, databases)
-import {
-  portfolioBackendStackOptions,
-  portfolioDatabaseOptions,
-  portfolioFrontendStackOptions,
-  portfolioProductOptions,
-  createPortfolioFilterState
-} from '../../data/portfolioOptions'
+import { createPortfolioFilterState } from '../../data/portfolioOptions'
 
 const filters = ref<PortfolioFilterState>(createPortfolioFilterState())
 const masterDataStore = useMasterDataStore()
@@ -51,12 +45,15 @@ const productStatusOptions = computed(() =>
 const projectStatusOptions = computed(() =>
   withAll('All Project Statuses', masterDataStore.projectStatusOptions)
 )
-
-// Opsi Stacks & Years (Tech stacks & kalender):
-const productOptions = withAll('All Products', portfolioProductOptions)
-const frontendStackOptions = withAll('All Frontend Stacks', portfolioFrontendStackOptions)
-const backendStackOptions = withAll('All Backend Stacks', portfolioBackendStackOptions)
-const databaseOptions = withAll('All Databases', portfolioDatabaseOptions)
+// Opsi Products & Tech Stacks DINAMIS dari API:
+const productOptions = computed(() => withAll('All Products', masterDataStore.productOptions))
+const frontendStackOptions = computed(() =>
+  withAll('All Frontend Stacks', masterDataStore.frontendStackOptions)
+)
+const backendStackOptions = computed(() =>
+  withAll('All Backend Stacks', masterDataStore.backendStackOptions)
+)
+const databaseOptions = computed(() => withAll('All Databases', masterDataStore.databaseOptions))
 
 const yearOptions = [
   { label: 'All Years', value: '' },
