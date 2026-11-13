@@ -105,3 +105,71 @@ export interface MasterDataItem {
   // Fleksibel menangani prefix backend (contoh: industry_name, company_size_name, dsb)
   [key: string]: any
 }
+
+// ==========================================
+// --- API Types for GET /api/v1/projects ---
+// ==========================================
+
+export interface ProjectQueryParams {
+  search?: string
+  customer_name?: string
+  customer_location?: string
+  company_size_id?: string
+  customer_type_id?: string
+  industry_id?: string
+  legal_structure_id?: string
+  tech_stack_id?: string
+  project_status_id?: string
+  business_unit_id?: string
+  year?: number | string
+  is_featured?: boolean
+  page?: number
+  page_size?: number
+  sort?: string
+}
+
+export interface BackendProjectItem {
+  id: string
+  project_code: string
+  project_name: string
+  year: number
+  project_objective: string
+  customer_name: string
+  industry?: {
+    id: string
+    code: string
+    name: string
+  }
+  tech_stacks?: {
+    frontend?: Array<{ id: string; name: string }>
+    backend?: Array<{ id: string; name: string }>
+    data_storage?: Array<{ id: string; name: string }>
+  }
+  project_status?: {
+    id: string
+    code: string
+    name: string
+  }
+  contract_name?: string
+  contract_number?: string
+  start_date?: string
+  end_date?: string
+  progress_percent?: number
+  remaining_days?: number
+  is_featured?: boolean
+  cover_image_url?: string | null
+  updated_at: string
+  value_before_tax?: number
+}
+
+export interface ProjectsListResponse {
+  success: boolean
+  message: string
+  data: {
+    items: BackendProjectItem[]
+    page: number
+    page_size: number
+    total: number
+    total_pages: number
+  }
+}

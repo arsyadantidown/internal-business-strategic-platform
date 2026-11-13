@@ -9,7 +9,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   currentPage: 1,
-  totalItems: 128,
+  totalItems: 0,
   pageSize: 12
 })
 
@@ -31,10 +31,33 @@ const endItem = computed(() => {
 })
 
 const goToPage = (page: number) => {
-  if (page >= 1 && page <= totalPages.value) {
+  if (page >= 1 && page <= totalPages.value && page !== props.currentPage) {
     emit('update:currentPage', page)
   }
 }
+
+// Logika cerdas untuk deretan nomor halaman (Dynamic Windowing)
+const visiblePages = computed(() => {
+  const total = totalPages.value
+  const current = props.currentPage
+
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+
+  // Jika di awal halaman
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total]
+  }
+
+  // Jika di akhir halaman
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
+  }
+
+  // Jika di tengah halaman
+  return [1, '...', current - 1, current, current + 1, '...', total]
+})
 </script>
 
 <template>
@@ -56,43 +79,32 @@ const goToPage = (page: number) => {
         aria-label="Previous Page"
         @click="goToPage(currentPage - 1)"
       >
-        <UIcon
-          name="i-lucide-chevron-left"
-          class="h-4 w-4"
-        />
+        <UIcon name="i-lucide-chevron-left" class="h-4 w-4" />
       </button>
 
-      <!-- Tombol Halaman Dummy/Reaktif (1, 2, 3, 4, 5, ..., 11) -->
+      <!-- Daftar Tombol Halaman & Titik-titik -->
       <div class="flex items-center gap-1">
-        <button
-          v-for="page in [1, 2, 3, 4, 5]"
-          :key="page"
-          type="button"
-          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-all cursor-pointer"
-          :class="[
-            currentPage === page
-              ? 'bg-blue-600 text-white shadow-xs'
-              : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-          ]"
-          @click="goToPage(page)"
-        >
-          {{ page }}
-        </button>
+        <template v-for="(item, idx) in visiblePages" :key="idx">
+          <!-- Jika berupa angka -->
+          <button
+            v-if="typeof item === 'number'"
+            type="button"
+            class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-all cursor-pointer"
+            :class="[
+              currentPage === item
+                ? 'bg-blue-600 text-white shadow-xs border border-blue-600'
+                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+            ]"
+            @click="goToPage(item)"
+          >
+            {{ item }}
+          </button>
 
-        <!-- Ellipsis (...) -->
-        <span class="px-1 text-xs font-medium text-slate-400">...</span>
-
-        <!-- Last Page (11) -->
-        <button
-          type="button"
-          class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 cursor-pointer"
-          :class="{
-            'bg-blue-600 text-white shadow-xs border-blue-600': currentPage === totalPages
-          }"
-          @click="goToPage(totalPages)"
-        >
-          {{ totalPages }}
-        </button>
+          <!-- Jika berupa tanda titik-titik (...) -->
+          <span v-else class="px-1 text-xs font-medium text-slate-400">
+            {{ item }}
+          </span>
+        </template>
       </div>
 
       <!-- Tombol Next -->
@@ -103,10 +115,7 @@ const goToPage = (page: number) => {
         aria-label="Next Page"
         @click="goToPage(currentPage + 1)"
       >
-        <UIcon
-          name="i-lucide-chevron-right"
-          class="h-4 w-4"
-        />
+        <UIcon name="i-lucide-chevron-right" class="h-4 w-4" />
       </button>
     </div>
   </div>

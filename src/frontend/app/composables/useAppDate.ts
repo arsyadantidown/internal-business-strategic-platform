@@ -1,4 +1,8 @@
 import dayjs from 'dayjs'
+import relativeTime from 'dayjs/plugin/relativeTime'
+
+// Aktifkan plugin relativeTime bawaan dayjs
+dayjs.extend(relativeTime)
 
 export function useAppDate() {
   /**
@@ -17,9 +21,18 @@ export function useAppDate() {
     return dayjs(dateStr).format('MMM D, YYYY')
   }
 
+  /**
+   * Format waktu relatif (contoh: "2 days ago", "a few seconds ago", "3 months ago")
+   */
+  const formatRelativeTime = (dateStr?: string | Date | null) => {
+    if (!dateStr) return '-'
+    return dayjs(dateStr).fromNow()
+  }
+
   return {
     dayjs,
     formatDateTime,
-    formatDate
+    formatDate,
+    formatRelativeTime
   }
 }
