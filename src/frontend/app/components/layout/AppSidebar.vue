@@ -92,7 +92,11 @@ const navigationSections: NavigationSection[] = [
             permission: 'portfolio.manage'
           },
           { label: 'Partnership Content', to: '/admin/content/partnership' },
-          { label: 'Partnership Workflow', to: '/admin/content/workflow' }
+          { label: 'Partnership Workflow', to: '/admin/content/workflow' },
+          { label: 'Product', to: '/admin/content/product' },
+          { label: 'Master Data', to: '/admin/content/master-data' },
+          { label: 'Tech Task', to: '/admin/content/tech-task' },
+          { label: 'Partner', to: '/admin/content/partner' }
         ]
       },
       {
