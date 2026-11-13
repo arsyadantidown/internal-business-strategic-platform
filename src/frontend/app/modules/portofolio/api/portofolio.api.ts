@@ -20,5 +20,13 @@ export const portfolioApi = {
       params: cleanParams
     })
     return response.data
+  },
+  async getProjectDetail(projectId: string): Promise<{
+    success: boolean
+    message: string
+    data: any // BackendProjectDetailResponse
+  }> {
+    const response = await apiClient.get(ENDPOINTS.PROJECTS.DETAIL(projectId))
+    return response.data
   }
 }

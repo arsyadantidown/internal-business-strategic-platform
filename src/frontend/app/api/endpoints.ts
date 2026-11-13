@@ -33,6 +33,7 @@ export const ENDPOINTS = {
   },
   PROJECTS: {
     BASE: '/api/v1/projects',
+    DETAIL: (projectId: string) => `/api/v1/projects/${projectId}`,
     FILES: (projectId: string) => `/api/v1/projects/${projectId}/files`
   },
   PRODUCTS: {
