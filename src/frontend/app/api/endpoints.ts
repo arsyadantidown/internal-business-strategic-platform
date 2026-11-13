@@ -30,5 +30,18 @@ export const ENDPOINTS = {
   },
   MASTER_DATA: {
     BASE: '/api/v1/master-data'
+  },
+  PROJECTS: {
+    BASE: '/api/v1/projects',
+    FILES: (projectId: string) => `/api/v1/projects/${projectId}/files`
+  },
+  PRODUCTS: {
+    BASE: '/api/v1/products'
+  },
+  TECH_STACKS: {
+    BASE: '/api/v1/tech-stacks'
+  },
+  PARTNERS: {
+    BASE: '/api/v1/partners'
   }
 } as const
