@@ -16,6 +16,8 @@ import ProjectTechStackCard from './ProjectTechStackCard.vue'
 import ProjectLocationCard from './ProjectLocationCard.vue'
 import ProjectDocumentCard from './ProjectDocumentCard.vue'
 import ProjectPartnersCard from './ProjectPartnersCard.vue'
+import CustomerInfoCard from './CustomerInfoCard.vue'
+import ProjectFinancialCard from './ProjectFinancialCard.vue'
 
 const route = useRoute()
 const projectId = route.params.id || '1'
@@ -227,10 +229,26 @@ const handleEditProject = () => {
           :period="project.period"
           :project-value="project.projectValue"
           :location="project.location"
-          :team-size="project.teamSize"
           :last-updated="project.updatedAt"
         />
+        <!-- Customer Info Card -->
+        <CustomerInfoCard
+          :customer-name="project.client"
+          :company-size="project.companySize"
+          :customer-type="project.customerType"
+          :legal-structure="project.legalStructure"
+        />
 
+        <ProjectFinancialCard
+          :value-before-tax="project.valueBeforeTax"
+          :value-after-tax="project.valueAfterTax"
+          :carry-over-value="project.carryOverValue"
+          :revenue="project.revenue"
+          :cogs="project.cogs"
+          :operational-cost="project.operationalCost"
+          :net-profit="project.netProfit"
+          :margin-profit-percent="project.marginProfitPercent"
+        />
         <!-- Industry & Technology Card -->
         <ProjectTechStackCard
           :industry="project.industry"

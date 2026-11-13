@@ -64,7 +64,19 @@ export interface ProjectDetailItem extends ProjectItem {
   period: string
   projectValue: string
   location: string
-  teamSize: string
+  businessUnit?: string
+  projectManager?: string
+  accountManager?: string
+  contractName?: string
+  contractNumber?: string
+  valueBeforeTax?: number | string | null
+  valueAfterTax?: number | string | null
+  carryOverValue?: number | string | null
+  revenue?: number | string | null
+  cogs?: number | string | null
+  operationalCost?: number | string | null
+  netProfit?: number | string | null
+  marginProfitPercent?: number | string | null
   serviceType: string
   projectType: string
   heroImages: string[]
