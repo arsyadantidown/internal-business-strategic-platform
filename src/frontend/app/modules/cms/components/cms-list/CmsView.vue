@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { usePortfolioStore } from '~/modules/portofolio/stores/portofolio.store'
+
 import type {
   CmsContent,
   CmsContentKind,
@@ -29,7 +32,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const toast = useToast()
 const router = useRouter()
-
+const portfolioStore = usePortfolioStore()
 const {
   activeKind,
   activities,
@@ -101,10 +104,7 @@ const saveActionPast: Record<CmsContentSaveAction, string> = {
   publish: 'published'
 }
 
-const handleSavePortfolio = (
-  values: CmsPortfolioFormValues,
-  action: CmsContentSaveAction
-) => {
+const handleSavePortfolio = (values: CmsPortfolioFormValues, action: CmsContentSaveAction) => {
   if (editingPortfolio.value) {
     const updated = updateContent('portfolio', editingPortfolio.value.id, values)
 
@@ -136,10 +136,7 @@ const handleSavePortfolio = (
   editingContent.value = null
 }
 
-const handleSavePartnership = (
-  values: CmsPartnershipFormValues,
-  action: CmsContentSaveAction
-) => {
+const handleSavePartnership = (values: CmsPartnershipFormValues, action: CmsContentSaveAction) => {
   if (editingPartnership.value) {
     const updated = updateContent('partnership', editingPartnership.value.id, values)
 
@@ -171,9 +168,30 @@ const handleSavePartnership = (
   editingContent.value = null
 }
 
-const handleDeleteConfirm = () => {
+const handleDeleteConfirm = async () => {
   const target = selectedContent.value
-  if (target) {
+  if (!target) return
+  // 1. Jika yang dihapus adalah konten Portfolio -> Panggil Backend API via Store
+  if (target.kind === 'portfolio') {
+    try {
+      await portfolioStore.deleteProject(target.id)
+      // Hapus juga dari audit trail CMS & state lokal
+      deleteContent(target.kind, target.id)
+      toast.add({
+        title: 'Project deleted',
+        description: `"${target.title}" has been permanently removed from the database.`,
+        color: 'success'
+      })
+    } catch (error: any) {
+      toast.add({
+        title: 'Delete failed',
+        description: error?.response?.data?.message || 'Failed to delete project from server.',
+        color: 'error'
+      })
+    }
+  }
+  // 2. Jika partnership (masih lokal)
+  else {
     const deleted = deleteContent(target.kind, target.id)
     if (deleted) {
       toast.add({
@@ -181,15 +199,8 @@ const handleDeleteConfirm = () => {
         description: `"${deleted.title}" has been removed from the library.`,
         color: 'success'
       })
-    } else {
-      toast.add({
-        title: 'Delete failed',
-        description: 'The selected content could not be found.',
-        color: 'error'
-      })
     }
   }
-
   isDeleteOpen.value = false
   selectedContent.value = null
 }
@@ -224,10 +235,7 @@ const closePartnershipForm = () => {
 
 <template>
   <div class="space-y-4 pb-8">
-    <CmsPageHeader
-      :kind="activeKind"
-      @add-content="openCreate"
-    />
+    <CmsPageHeader :kind="activeKind" @add-content="openCreate" />
 
     <CmsStats :stats="stats" />
 

@@ -28,5 +28,13 @@ export const portfolioApi = {
   }> {
     const response = await apiClient.get(ENDPOINTS.PROJECTS.DETAIL(projectId))
     return response.data
+  },
+
+  async deleteProject(projectId: string): Promise<{
+    success: boolean
+    message: string
+  }> {
+    const response = await apiClient.delete(`${ENDPOINTS.PROJECTS.BASE}/${projectId}`)
+    return response.data
   }
 }

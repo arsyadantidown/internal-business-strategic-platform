@@ -240,6 +240,26 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     }
   }
 
+  const deleteProject = async (projectId: string) => {
+    isLoading.value = true
+    errorMessage.value = null
+    try {
+      const response = await portfolioApi.deleteProject(projectId)
+      if (response.success) {
+        // Hapus dari state memori lokal agar UI langsung update seketika
+        projects.value = projects.value.filter((item) => item.id !== projectId)
+        if (totalItems.value > 0) totalItems.value -= 1
+        return true
+      }
+      return false
+    } catch (err: any) {
+      errorMessage.value = err?.response?.data?.message || err?.message || 'Gagal menghapus project'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     projects,
     isLoading,
@@ -252,6 +272,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     isDetailLoading,
     detailError,
     fetchProjectDetail,
-    fetchProjects
+    fetchProjects,
+    deleteProject
   }
 })
