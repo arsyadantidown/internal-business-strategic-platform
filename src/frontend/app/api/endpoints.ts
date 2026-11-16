@@ -34,7 +34,13 @@ export const ENDPOINTS = {
   PROJECTS: {
     BASE: '/api/v1/projects',
     DETAIL: (projectId: string) => `/api/v1/projects/${projectId}`,
-    FILES: (projectId: string) => `/api/v1/projects/${projectId}/files`
+    FILES: (projectId: string) => `/api/v1/projects/${projectId}/files`,
+    CUSTOMER: (projectId: string) => `/api/v1/projects/${projectId}/customer`,
+    FINANCIAL: (projectId: string) => `/api/v1/projects/${projectId}/financial`,
+    PRODUCTS: (projectId: string) => `/api/v1/projects/${projectId}/products`,
+    TECH_STACKS: (projectId: string) => `/api/v1/projects/${projectId}/tech-stacks`,
+    PARTNERS: (projectId: string) => `/api/v1/projects/${projectId}/partners`,
+    SUCCESS_METRICS: (projectId: string) => `/api/v1/projects/${projectId}/success-metrics`
   },
   PRODUCTS: {
     BASE: '/api/v1/products'
