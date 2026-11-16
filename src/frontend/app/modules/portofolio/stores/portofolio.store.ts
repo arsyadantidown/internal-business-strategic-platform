@@ -230,11 +230,13 @@ export const usePortfolioStore = defineStore('portfolio', () => {
       const response = await portfolioApi.getProjectDetail(projectId)
       if (response.success && response.data) {
         currentProject.value = mapBackendDetailToProject(response.data)
+        return response.data // <-- Pastikan ada return response.data di sini
       }
     } catch (err: any) {
       detailError.value =
         err?.response?.data?.message || err?.message || 'Gagal mengambil detail project'
       currentProject.value = null
+      return null
     } finally {
       isDetailLoading.value = false
     }

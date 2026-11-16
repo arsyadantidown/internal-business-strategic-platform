@@ -1,913 +1,1140 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
-import type {
-  CmsContentSaveAction,
-  CmsFormErrors,
-  CmsPortfolioContent,
-  CmsPortfolioFormValues
-} from '../../types/cms.types'
-import {
-  cmsAuthorOptions,
-  cmsCurrencyOptions,
-  cmsCurrentActor,
-  cmsFundingTypeOptions,
-  cmsProjectTypeOptions,
-  cmsRelatedPartnerFilterOptions,
-  cmsServiceTypeOptions,
-  cmsTechnologyOptions,
-  cmsVisibilityFilterOptions
-} from '../../data/cms.data'
-import {
-  portfolioIndustryOptions,
-  portfolioProjectStatusOptions
-} from '~/modules/portofolio/data/portfolioOptions'
-import {
-  cmsControlClass,
-  cmsControlStateClass,
-  joinCmsLines,
-  parseCmsDocuments,
-  serializeCmsDocuments,
-  slugifyCmsTitle,
-  splitCmsLines
-} from '../../utils/cmsForm'
-import { formatCmsDateTimeLocalValue, stripCmsHtml } from '../../utils/cmsFormat'
-import CmsFormSection from './CmsFormSection.vue'
+import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import type { CmsPortfolioContent } from '../../types/cms.types'
+import { usePortfolioStore } from '~/modules/portofolio/stores/portofolio.store'
+import { useMasterDataStore } from '~/modules/portofolio/stores/master-data.store'
+import { cmsControlClass, cmsControlStateClass } from '../../utils/cmsForm'
 import CmsFormField from './CmsFormField.vue'
-import CmsOptionChips from './CmsOptionChips.vue'
+import CmsFormSection from './CmsFormSection.vue'
 import CmsRichTextEditor from './CmsRichTextEditor.vue'
+import CmsUploadArea from './CmsUploadArea.vue'
+import { useCmsPortfolioForm } from '../../composables/useCmsPortfolioForm'
 
 interface Props {
   isOpen: boolean
   content: CmsPortfolioContent | null
 }
 
-type PortfolioFormState = CmsPortfolioFormValues & {
-  challengesText: string
-  solutionsText: string
-  documentsText: string
-}
-
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'close'): void
-  (e: 'save', values: CmsPortfolioFormValues, action: CmsContentSaveAction): void
+  (e: 'save'): void
 }>()
 
-const emptyForm = (): PortfolioFormState => ({
-  title: '',
-  summary: '',
-  status: 'Draft',
-  author: cmsCurrentActor,
-  featured: false,
-  publishedAt: '',
-  scheduledAt: '',
-  projectType: '',
-  serviceType: '',
-  industry: '',
-  client: '',
-  clientIndustry: '',
-  clientLocation: '',
-  contactName: '',
-  contactEmail: '',
-  projectStatus: 'On Proposal',
-  startDate: '',
-  endDate: '',
-  location: '',
-  teamSize: '',
-  projectValue: '',
-  currency: 'IDR',
-  fundingType: 'Client Funded',
-  overview: '',
-  background: '',
-  challenges: [],
-  solutions: [],
-  image: '',
-  documents: [],
-  technologies: [],
-  partners: [],
-  visibility: 'Internal',
-  challengesText: '',
-  solutionsText: '',
-  documentsText: ''
-})
+// 1. Inisialisasi Store Resmi
+const portfolioStore = usePortfolioStore()
+const masterDataStore = useMasterDataStore()
 
-const form = ref<PortfolioFormState>(emptyForm())
-const errors = ref<CmsFormErrors>({})
+const featuredCover = ref<any>(null)
+const galleryFiles = ref<any[]>([])
+const caseStudyFile = ref<any>(null)
+const supportingDocuments = ref<any[]>([])
 
-const isEditing = computed(() => Boolean(props.content))
-const modalTitle = computed(() =>
-  isEditing.value ? 'Edit Portfolio Content' : 'Add Portfolio Content'
-)
+// 1. Opsi Role Partner untuk dropdown kedua (Principal / Vendor)
+const partnerRoleOptions = [
+  { value: 'principal', label: 'Principal' },
+  { value: 'vendor', label: 'Vendor' },
+  { value: 'distributor', label: 'Distributor' },
+  { value: 'subcontractor', label: 'Subcontractor' }
+]
 
-const currentStatusLabel = computed(() => props.content?.status ?? 'Draft')
+// 2. State untuk list Master Partner dari API (diambil saat mount)
+import { projectApi } from '~/modules/cms/api/project.api'
+const partnerList = ref<{ label: string; value: string }[]>([])
 
-const partnerNames = computed<string[]>({
-  get: () => form.value.partners.map(partner => partner.name),
-  set: (names) => {
-    form.value.partners = names.map((name) => {
-      const existing = form.value.partners.find(partner => partner.name === name)
-      return existing ?? { name, role: 'Partner', tag: 'Related Partner' }
-    })
+// Load Master Data & Partners
+onMounted(async () => {
+  masterDataStore.fetchAllMasterData()
+  try {
+    const resPartners = await projectApi.getPartners()
+    partnerList.value = (resPartners || []).map((p: any) => ({
+      label: p.partner_name || p.name || '',
+      value: p.id
+    }))
+  } catch (err) {
+    console.error('Failed to load partners', err)
   }
 })
 
-const populateForm = () => {
-  const item = props.content
+// Options dropdown Master Data
+const businessUnitOptions = computed(() => masterDataStore.businessUnitOptions)
+const projectStatusOptions = computed(() => masterDataStore.projectStatusOptions)
+const industryOptions = computed(() => masterDataStore.industryOptions)
+const companySizeOptions = computed(() => masterDataStore.companySizeOptions)
+const customerTypeOptions = computed(() => masterDataStore.customerTypeOptions)
+const legalStructureOptions = computed(() => masterDataStore.legalStructureOptions)
+const productOptions = computed(() => masterDataStore.productOptions)
 
-  if (!item) {
-    form.value = emptyForm()
-    errors.value = {}
-    return
-  }
+// FIX TECH STACK: Ambil dari raw list masterDataStore.techStacks!
+const techStackOptions = computed(() => {
+  return (masterDataStore.techStacks || []).map((t: any) => ({
+    label: t.tech_stack_name || t.name || '',
+    value: t.id
+  }))
+})
+// State Section Accordion
+const openSections = reactive<Record<string, boolean>>({
+  'project-information': true,
+  'customer-information': true,
+  'contract-governance': true,
+  'financial-information': true,
+  'project-content': true,
+  'products-tech-partners': true,
+  'media-documents': true
+})
 
-  form.value = {
-    ...emptyForm(),
-    ...item,
-    publishedAt: item.publishedAt ?? '',
-    scheduledAt: item.scheduledAt ? item.scheduledAt.slice(0, 16) : '',
-    challengesText: joinCmsLines(item.challenges),
-    solutionsText: joinCmsLines(item.solutions),
-    documentsText: serializeCmsDocuments(item.documents)
-  }
-  errors.value = {}
-}
+// State Allow Edit: Default FALSE (Unchecked = Disabled)
+const allowEdit = reactive<Record<string, boolean>>({
+  'project-information': false,
+  'customer-information': false,
+  'contract-governance': false,
+  'financial-information': false,
+  'project-content': false,
+  'products-tech-partners': false,
+  'media-documents': false
+})
 
-const clearError = (field: string) => {
-  if (!errors.value[field]) return
-  errors.value = { ...errors.value, [field]: undefined }
-}
+const {
+  form,
+  estimatedProfit,
+  populateFormFromStore,
+  addPartner,
+  removePartner,
+  addSuccessMetric,
+  removeSuccessMetric
+} = useCmsPortfolioForm()
 
-const handleTitleBlur = () => {
-  // slug removed
-}
-
-const validate = (action: CmsContentSaveAction) => {
-  const nextErrors: CmsFormErrors = {}
-
-  if (form.value.title.trim().length < 3) {
-    nextErrors.title = 'Title is required and must be at least 3 characters.'
-  }
-  if (form.value.summary.trim().length < 10) {
-    nextErrors.summary = 'Summary must be at least 10 characters.'
-  }
-  if (!form.value.client.trim()) {
-    nextErrors.client = 'Client name is required.'
-  }
-  if (!form.value.industry) {
-    nextErrors.industry = 'Please select an industry.'
-  }
-  if (!form.value.projectType) {
-    nextErrors.projectType = 'Please select a project type.'
-  }
-  if (!form.value.serviceType) {
-    nextErrors.serviceType = 'Please select a service type.'
-  }
-  if (!form.value.projectStatus) {
-    nextErrors.projectStatus = 'Please select a project status.'
-  }
-  if (stripCmsHtml(form.value.overview).length < 30) {
-    nextErrors.overview = 'Overview must be at least 30 characters.'
-  }
-  if (!form.value.author) {
-    nextErrors.author = 'Please select an author.'
-  }
-  if (action === 'schedule') {
-    if (!form.value.scheduledAt) {
-      nextErrors.scheduledAt = 'Choose the publication date and time.'
-    } else if (new Date(form.value.scheduledAt).getTime() <= Date.now()) {
-      nextErrors.scheduledAt = 'Scheduled publication must be in the future.'
-    }
-  }
-
-  errors.value = nextErrors
-  return Object.keys(nextErrors).length === 0
-}
-
-const handleSubmit = (action: CmsContentSaveAction) => {
-  if (!validate(action)) return
-
-  const {
-    challengesText,
-    solutionsText,
-    documentsText,
-    ...values
-  } = form.value
-
-  emit('save', {
-    ...values,
-    status: action === 'publish' ? 'Published' : action === 'schedule' ? 'Scheduled' : 'Draft',
-    publishedAt: action === 'publish' ? new Date().toISOString() : '',
-    scheduledAt: action === 'schedule' ? values.scheduledAt : '',
-    title: values.title.trim(),
-    summary: values.summary.trim(),
-    client: values.client.trim(),
-    challenges: splitCmsLines(challengesText),
-    solutions: splitCmsLines(solutionsText),
-    documents: parseCmsDocuments(documentsText)
-  }, action)
-}
-
+// Watcher: Saat modal dibuka, panggil Store untuk load data detail
 watch(
-  [() => props.isOpen, () => props.content],
-  ([isOpen]) => {
-    if (isOpen) populateForm()
+  () => [props.isOpen, props.content],
+  async ([isOpen, content]) => {
+    if (isOpen && content?.id) {
+      const detail = await portfolioStore.fetchProjectDetail(content.id)
+      if (detail) {
+        populateFormFromStore(detail)
+      }
+    }
   },
   { immediate: true }
 )
+
+const toggleProduct = (id: string) => {
+  if (!allowEdit['products-tech-partners']) return
+  const idx = form.product_ids.indexOf(id)
+  if (idx === -1) form.product_ids.push(id)
+  else form.product_ids.splice(idx, 1)
+}
+
+const toggleTechStack = (id: string) => {
+  if (!allowEdit['products-tech-partners']) return
+  const idx = form.tech_stack_ids.indexOf(id)
+  if (idx === -1) form.tech_stack_ids.push(id)
+  else form.tech_stack_ids.splice(idx, 1)
+}
+
+// Media upload handlers
+const handleCoverImage = (files: File[]) => {
+  if (!files.length) return
+  const file = files[0]
+  if (featuredCover.value?.previewUrl) {
+    URL.revokeObjectURL(featuredCover.value.previewUrl)
+  }
+  featuredCover.value = {
+    file,
+    category: 'image',
+    title: 'Featured Cover',
+    previewUrl: URL.createObjectURL(file)
+  }
+}
+
+const removeCoverImage = () => {
+  if (featuredCover.value?.previewUrl) {
+    URL.revokeObjectURL(featuredCover.value.previewUrl)
+  }
+  featuredCover.value = null
+}
+
+const handleGalleryImages = (files: File[]) => {
+  files.forEach((file) => {
+    galleryFiles.value.push({
+      file,
+      category: 'image',
+      title: file.name,
+      previewUrl: URL.createObjectURL(file)
+    })
+  })
+}
+
+const removeGalleryImage = (index: number) => {
+  const item = galleryFiles.value[index]
+  if (item?.previewUrl) {
+    URL.revokeObjectURL(item.previewUrl)
+  }
+  galleryFiles.value.splice(index, 1)
+}
+
+const handleCaseStudy = (files: File[]) => {
+  if (!files.length) return
+  const file = files[0]
+  caseStudyFile.value = {
+    file,
+    category: 'case_study',
+    title: file.name
+  }
+}
+
+const handleSupportingDocuments = (files: File[]) => {
+  files.forEach((file) => {
+    supportingDocuments.value.push({
+      file,
+      category: 'document',
+      title: file.name
+    })
+  })
+}
+
+const removeSupportingDocument = (index: number) => {
+  supportingDocuments.value.splice(index, 1)
+}
+
+onBeforeUnmount(() => {
+  if (featuredCover.value?.previewUrl) URL.revokeObjectURL(featuredCover.value.previewUrl)
+  galleryFiles.value.forEach((i) => i.previewUrl && URL.revokeObjectURL(i.previewUrl))
+})
 </script>
 
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 p-4 py-6 font-sans backdrop-blur-sm"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs font-sans"
     @click.self="emit('close')"
   >
-    <div class="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl">
-      <div class="flex items-start justify-between border-b border-slate-100 px-6 py-4">
-        <div class="flex items-start gap-3">
-          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <UIcon
-              :name="isEditing ? 'i-lucide-pencil' : 'i-lucide-briefcase'"
-              class="h-4 w-4"
-            />
-          </div>
-          <div>
-            <h2 class="text-sm font-bold tracking-tight text-slate-900">
-              {{ modalTitle }}
-            </h2>
-            <p class="mt-0.5 text-[11px] text-slate-500">
-              {{ isEditing ? 'Update the portfolio content and publication settings.' : 'Fill in the portfolio details across each content section.' }}
-            </p>
-          </div>
+    <div
+      class="relative w-full max-w-4xl rounded-2xl border border-slate-100 bg-white shadow-2xl flex flex-col max-h-[92vh]"
+    >
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4 shrink-0">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">
+            {{ content ? 'Edit Portfolio Content' : 'Add Portfolio Content' }}
+          </h2>
+          <p class="text-xs text-slate-500">
+            Configure project information, governance, metrics, and supporting assets.
+          </p>
         </div>
-
         <button
           type="button"
-          class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
-          aria-label="Close"
+          class="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
           @click="emit('close')"
         >
-          <UIcon
-            name="i-lucide-x"
-            class="h-4 w-4"
-          />
+          <UIcon name="i-lucide-x" class="h-4 w-4" />
         </button>
       </div>
 
-      <form @submit.prevent>
-        <div class="max-h-[72vh] space-y-4 overflow-y-auto bg-slate-50/40 px-6 py-5">
+      <!-- Modal Body (Scrollable Container) -->
+      <div class="overflow-y-auto p-6 space-y-5">
+        <!-- Loading State saat fetch detail dari store -->
+        <div
+          v-if="portfolioStore.isDetailLoading"
+          class="flex flex-col items-center justify-center py-20 gap-3"
+        >
+          <UIcon name="i-lucide-loader-2" class="h-8 w-8 animate-spin text-blue-600" />
+          <p class="text-xs font-medium text-slate-500">Loading project detail from database...</p>
+        </div>
+
+        <template v-else>
+          <!-- 1. PROJECT INFORMATION -->
           <CmsFormSection
+            v-model:open="openSections['project-information']"
             title="Project Information"
-            description="Core identity and positioning of the portfolio item."
-            icon="i-lucide-info"
+            description="Basic information, identification, and business unit assignment."
+            icon="i-lucide-briefcase"
+            collapsible
           >
-            <CmsFormField
-              label="Project Title"
-              html-for="portfolio-title"
-              required
-              :error="errors.title"
-            >
-              <input
-                id="portfolio-title"
-                v-model="form.title"
-                type="text"
-                placeholder="Enter project title"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.title))]"
-                @input="clearError('title')"
-                @blur="handleTitleBlur"
+            <!-- Enable Editing Checkbox (KIRI) -->
+            <div class="sm:col-span-2 -mt-1 mb-2.5 flex items-center justify-start">
+              <label
+                class="inline-flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-slate-600 hover:text-slate-900"
               >
-            </CmsFormField>
-
-            <CmsFormField
-              label="Project Type"
-              html-for="portfolio-project-type"
-              required
-              :error="errors.projectType"
-            >
-              <select
-                id="portfolio-project-type"
-                v-model="form.projectType"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.projectType))]"
-                @change="clearError('projectType')"
-              >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select project type
-                </option>
-                <option
-                  v-for="option in cmsProjectTypeOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </CmsFormField>
-
-            <CmsFormField
-              label="Service Type"
-              html-for="portfolio-service-type"
-              required
-              :error="errors.serviceType"
-            >
-              <select
-                id="portfolio-service-type"
-                v-model="form.serviceType"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.serviceType))]"
-                @change="clearError('serviceType')"
-              >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select service type
-                </option>
-                <option
-                  v-for="option in cmsServiceTypeOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </CmsFormField>
-
-            <CmsFormField
-              label="Industry"
-              html-for="portfolio-industry"
-              required
-              :error="errors.industry"
-            >
-              <select
-                id="portfolio-industry"
-                v-model="form.industry"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.industry))]"
-                @change="clearError('industry')"
-              >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select industry
-                </option>
-                <option
-                  v-for="option in portfolioIndustryOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </CmsFormField>
-
-            <CmsFormField
-              label="Summary"
-              html-for="portfolio-summary"
-              required
-              full
-              :error="errors.summary"
-            >
-              <textarea
-                id="portfolio-summary"
-                v-model="form.summary"
-                rows="2"
-                placeholder="Write a short summary shown in listings"
-                class="py-2"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.summary))]"
-                @input="clearError('summary')"
-              />
-            </CmsFormField>
-
-            <CmsFormField
-              label="Featured"
-              full
-            >
-              <label class="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600">
                 <input
-                  v-model="form.featured"
+                  v-model="allowEdit['project-information']"
                   type="checkbox"
-                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                >
-                Highlight this portfolio item on the public directory
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span :class="{ 'font-bold text-blue-600': allowEdit['project-information'] }">
+                  {{
+                    allowEdit['project-information']
+                      ? 'Editing enabled'
+                      : 'Enable editing for this section'
+                  }}
+                </span>
               </label>
+            </div>
+
+            <CmsFormField label="Project Code" required>
+              <input
+                v-model="form.project_code"
+                type="text"
+                placeholder="e.g. PRJ-2026-001"
+                :disabled="!allowEdit['project-information']"
+                class="h-9 font-mono disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
             </CmsFormField>
+
+            <CmsFormField label="Project Name" required>
+              <input
+                v-model="form.project_name"
+                type="text"
+                placeholder="e.g. Digital Banking Transformation"
+                :disabled="!allowEdit['project-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Opportunity / Service Type">
+              <input
+                v-model="form.opportunity"
+                type="text"
+                placeholder="e.g. Core Banking Upgrade"
+                :disabled="!allowEdit['project-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Year" required>
+              <input
+                v-model.number="form.year"
+                type="number"
+                :disabled="!allowEdit['project-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Business Unit" required>
+              <select
+                v-model="form.business_unit_id"
+                :disabled="!allowEdit['project-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              >
+                <option value="">Select Business Unit</option>
+                <option v-for="opt in businessUnitOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </CmsFormField>
+
+            <CmsFormField label="Project Status" required>
+              <select
+                v-model="form.project_status_id"
+                :disabled="!allowEdit['project-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              >
+                <option value="">Select Project Status</option>
+                <option v-for="opt in projectStatusOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
+            </CmsFormField>
+
+            <!-- Checkbox: Is Featured Project (di kiri bawah) -->
+            <div class="sm:col-span-2 pt-1">
+              <label
+                class="inline-flex items-center gap-2.5 text-xs font-medium cursor-pointer select-none text-slate-700"
+                :class="{ 'opacity-50 cursor-not-allowed': !allowEdit['project-information'] }"
+              >
+                <input
+                  v-model="form.is_featured"
+                  type="checkbox"
+                  :disabled="!allowEdit['project-information']"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <span class="flex items-center gap-1.5">
+                  <UIcon name="i-lucide-star" class="h-3.5 w-3.5 text-amber-500" />
+                  <span>Mark as Featured Project</span>
+                </span>
+                <span class="text-[11px] text-slate-400 font-normal">
+                  (Displays highlighted on top showcases & hero banners)
+                </span>
+              </label>
+            </div>
           </CmsFormSection>
 
+          <!-- 2. CUSTOMER INFORMATION -->
           <CmsFormSection
+            v-model:open="openSections['customer-information']"
             title="Customer Information"
-            description="Client profile and primary contact."
+            description="Client identity, classification, and organization size."
             icon="i-lucide-building-2"
+            collapsible
           >
-            <CmsFormField
-              label="Client Name"
-              html-for="portfolio-client"
-              required
-              :error="errors.client"
-            >
-              <input
-                id="portfolio-client"
-                v-model="form.client"
-                type="text"
-                placeholder="Enter client or organization name"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.client))]"
-                @input="clearError('client')"
+            <!-- Enable Editing Checkbox (KIRI) -->
+            <div class="sm:col-span-2 -mt-1 mb-2.5 flex items-center justify-start">
+              <label
+                class="inline-flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-slate-600 hover:text-slate-900"
               >
+                <input
+                  v-model="allowEdit['customer-information']"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span :class="{ 'font-bold text-blue-600': allowEdit['customer-information'] }">
+                  {{
+                    allowEdit['customer-information']
+                      ? 'Editing enabled'
+                      : 'Enable editing for this section'
+                  }}
+                </span>
+              </label>
+            </div>
+
+            <CmsFormField label="Customer Name" required>
+              <input
+                v-model="form.customer.customer_name"
+                type="text"
+                placeholder="e.g. Bank Central Asia"
+                :disabled="!allowEdit['customer-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Client Industry"
-              html-for="portfolio-client-industry"
-            >
+            <CmsFormField label="Customer Location">
+              <input
+                v-model="form.customer.customer_location"
+                type="text"
+                placeholder="e.g. Jakarta, Indonesia"
+                :disabled="!allowEdit['customer-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Annual Revenue">
+              <input
+                v-model="form.customer.annual_revenue"
+                type="text"
+                placeholder="e.g. 115T"
+                :disabled="!allowEdit['customer-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Industry" required>
               <select
-                id="portfolio-client-industry"
-                v-model="form.clientIndustry"
-                class="h-9"
+                v-model="form.customer.industry_id"
+                :disabled="!allowEdit['customer-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select client industry
-                </option>
-                <option
-                  v-for="option in portfolioIndustryOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
+                <option value="">Select Industry</option>
+                <option v-for="opt in industryOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
                 </option>
               </select>
             </CmsFormField>
 
-            <CmsFormField
-              label="Client Location"
-              html-for="portfolio-client-location"
-            >
-              <input
-                id="portfolio-client-location"
-                v-model="form.clientLocation"
-                type="text"
-                placeholder="City, Country"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-            </CmsFormField>
-
-            <CmsFormField
-              label="Contact Name"
-              html-for="portfolio-contact-name"
-            >
-              <input
-                id="portfolio-contact-name"
-                v-model="form.contactName"
-                type="text"
-                placeholder="Primary client contact"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-            </CmsFormField>
-
-            <CmsFormField
-              label="Contact Email"
-              html-for="portfolio-contact-email"
-              full
-            >
-              <input
-                id="portfolio-contact-email"
-                v-model="form.contactEmail"
-                type="email"
-                placeholder="name@company.com"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-            </CmsFormField>
-          </CmsFormSection>
-
-          <CmsFormSection
-            title="Project Details"
-            description="Delivery timeline, location, and status."
-            icon="i-lucide-calendar-range"
-          >
-            <CmsFormField
-              label="Project Status"
-              html-for="portfolio-project-status"
-              required
-              :error="errors.projectStatus"
-            >
+            <CmsFormField label="Company Size">
               <select
-                id="portfolio-project-status"
-                v-model="form.projectStatus"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.projectStatus))]"
-                @change="clearError('projectStatus')"
+                v-model="form.customer.company_size_id"
+                :disabled="!allowEdit['customer-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select project status
-                </option>
-                <option
-                  v-for="option in portfolioProjectStatusOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
+                <option value="">Select Company Size</option>
+                <option v-for="opt in companySizeOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
                 </option>
               </select>
             </CmsFormField>
 
-            <CmsFormField
-              label="Team Size"
-              html-for="portfolio-team-size"
-            >
-              <input
-                id="portfolio-team-size"
-                v-model="form.teamSize"
-                type="text"
-                placeholder="e.g. 12 members"
-                class="h-9"
+            <CmsFormField label="Customer Type">
+              <select
+                v-model="form.customer.customer_type_id"
+                :disabled="!allowEdit['customer-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
+                <option value="">Select Customer Type</option>
+                <option v-for="opt in customerTypeOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
             </CmsFormField>
 
-            <CmsFormField
-              label="Start Date"
-              html-for="portfolio-start-date"
-            >
-              <input
-                id="portfolio-start-date"
-                v-model="form.startDate"
-                type="date"
-                class="h-9"
+            <CmsFormField label="Legal Structure">
+              <select
+                v-model="form.customer.legal_structure_id"
+                :disabled="!allowEdit['customer-information']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
-            </CmsFormField>
-
-            <CmsFormField
-              label="End Date"
-              html-for="portfolio-end-date"
-            >
-              <input
-                id="portfolio-end-date"
-                v-model="form.endDate"
-                type="date"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-            </CmsFormField>
-
-            <CmsFormField
-              label="Project Location"
-              html-for="portfolio-location"
-              full
-            >
-              <input
-                id="portfolio-location"
-                v-model="form.location"
-                type="text"
-                placeholder="City, Country"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+                <option value="">Select Legal Structure</option>
+                <option v-for="opt in legalStructureOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </option>
+              </select>
             </CmsFormField>
           </CmsFormSection>
 
+          <!-- 3. CONTRACT & GOVERNANCE -->
           <CmsFormSection
+            v-model:open="openSections['contract-governance']"
+            title="Contract & Governance"
+            description="Contract metadata, period, and project management personnel."
+            icon="i-lucide-scroll"
+            collapsible
+          >
+            <!-- Enable Editing Checkbox (KIRI) -->
+            <div class="sm:col-span-2 -mt-1 mb-2.5 flex items-center justify-start">
+              <label
+                class="inline-flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-slate-600 hover:text-slate-900"
+              >
+                <input
+                  v-model="allowEdit['contract-governance']"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span :class="{ 'font-bold text-blue-600': allowEdit['contract-governance'] }">
+                  {{
+                    allowEdit['contract-governance']
+                      ? 'Editing enabled'
+                      : 'Enable editing for this section'
+                  }}
+                </span>
+              </label>
+            </div>
+
+            <CmsFormField label="Contract Name">
+              <input
+                v-model="form.contract_name"
+                type="text"
+                placeholder="Contract title"
+                :disabled="!allowEdit['contract-governance']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Contract Number">
+              <input
+                v-model="form.contract_number"
+                type="text"
+                placeholder="CTR/2026/001"
+                :disabled="!allowEdit['contract-governance']"
+                class="h-9 font-mono disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Start Date" required>
+              <input
+                v-model="form.start_date"
+                type="date"
+                :disabled="!allowEdit['contract-governance']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="End Date" required>
+              <input
+                v-model="form.end_date"
+                type="date"
+                :disabled="!allowEdit['contract-governance']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Project Manager">
+              <input
+                v-model="form.project_manager"
+                type="text"
+                placeholder="Name of Project Manager"
+                :disabled="!allowEdit['contract-governance']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Account Manager">
+              <input
+                v-model="form.account_manager"
+                type="text"
+                placeholder="Name of Account Manager"
+                :disabled="!allowEdit['contract-governance']"
+                class="h-9 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+          </CmsFormSection>
+
+          <!-- 4. FINANCIAL INFORMATION -->
+          <CmsFormSection
+            v-model:open="openSections['financial-information']"
             title="Financial Information"
-            description="Commercial value and funding context."
+            description="Budget, contract values, COGS, and estimated margins."
             icon="i-lucide-wallet"
+            collapsible
           >
-            <CmsFormField
-              label="Project Value"
-              html-for="portfolio-project-value"
-              hint="Numeric amount without separators."
-            >
+            <!-- Enable Editing Checkbox (KIRI) -->
+            <div class="sm:col-span-2 -mt-1 mb-2.5 flex items-center justify-start">
+              <label
+                class="inline-flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-slate-600 hover:text-slate-900"
+              >
+                <input
+                  v-model="allowEdit['financial-information']"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span :class="{ 'font-bold text-blue-600': allowEdit['financial-information'] }">
+                  {{
+                    allowEdit['financial-information']
+                      ? 'Editing enabled'
+                      : 'Enable editing for this section'
+                  }}
+                </span>
+              </label>
+            </div>
+
+            <CmsFormField label="Value Before Tax (IDR)" required>
               <input
-                id="portfolio-project-value"
-                v-model="form.projectValue"
-                type="text"
-                inputmode="numeric"
-                placeholder="e.g. 4500000000"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-            </CmsFormField>
-
-            <CmsFormField
-              label="Currency"
-              html-for="portfolio-currency"
-            >
-              <select
-                id="portfolio-currency"
-                v-model="form.currency"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-                <option
-                  v-for="option in cmsCurrencyOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </CmsFormField>
-
-            <CmsFormField
-              label="Funding Type"
-              html-for="portfolio-funding-type"
-              full
-            >
-              <select
-                id="portfolio-funding-type"
-                v-model="form.fundingType"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-                <option
-                  v-for="option in cmsFundingTypeOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-            </CmsFormField>
-          </CmsFormSection>
-
-          <CmsFormSection
-            title="Project Content"
-            description="Narrative used on the public portfolio detail."
-            icon="i-lucide-align-left"
-          >
-            <CmsFormField
-              label="Overview"
-              html-for="portfolio-overview"
-              required
-              full
-              :error="errors.overview"
-            >
-              <CmsRichTextEditor
-                id="portfolio-overview"
-                v-model="form.overview"
-                placeholder="Describe the project, scope, and outcome"
-                @update:model-value="clearError('overview')"
-              />
-            </CmsFormField>
-
-            <CmsFormField
-              label="Background"
-              html-for="portfolio-background"
-              full
-            >
-              <CmsRichTextEditor
-                id="portfolio-background"
-                v-model="form.background"
-                placeholder="Explain the client context and business need"
-              />
-            </CmsFormField>
-
-            <CmsFormField
-              label="Challenges"
-              html-for="portfolio-challenges"
-              full
-              hint="One challenge per line."
-            >
-              <textarea
-                id="portfolio-challenges"
-                v-model="form.challengesText"
-                rows="4"
-                placeholder="Legacy system with limited scalability"
-                class="py-2 leading-relaxed"
+                v-model.number="form.value_before_tax"
+                type="number"
+                placeholder="0"
+                :disabled="!allowEdit['financial-information']"
+                class="h-9 font-mono disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               />
             </CmsFormField>
 
-            <CmsFormField
-              label="Solutions"
-              html-for="portfolio-solutions"
-              full
-              hint="One solution per line."
-            >
-              <textarea
-                id="portfolio-solutions"
-                v-model="form.solutionsText"
-                rows="4"
-                placeholder="Modern web and mobile banking platform"
-                class="py-2 leading-relaxed"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              />
-            </CmsFormField>
-          </CmsFormSection>
-
-          <CmsFormSection
-            title="Media & Documents"
-            description="Cover image and downloadable project files."
-            icon="i-lucide-image"
-          >
-            <CmsFormField
-              label="Cover Image URL"
-              html-for="portfolio-image"
-              full
-            >
+            <CmsFormField label="Carry Over Value (IDR)">
               <input
-                id="portfolio-image"
-                v-model="form.image"
-                type="url"
-                placeholder="https://example.com/cover.jpg"
-                class="h-9"
+                v-model.number="form.carry_over_value"
+                type="number"
+                placeholder="0"
+                :disabled="!allowEdit['financial-information']"
+                class="h-9 font-mono disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="COGS (IDR)" required>
+              <input
+                v-model.number="form.financial.cogs"
+                type="number"
+                placeholder="0"
+                :disabled="!allowEdit['financial-information']"
+                class="h-9 font-mono disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField label="Operational Cost (IDR)" required>
+              <input
+                v-model.number="form.financial.operational_cost"
+                type="number"
+                placeholder="0"
+                :disabled="!allowEdit['financial-information']"
+                class="h-9 font-mono disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField full label="">
+              <div
+                class="rounded-xl border border-slate-100 bg-slate-50/70 p-3 flex items-center justify-between text-xs"
               >
-            </CmsFormField>
-
-            <CmsFormField
-              label="Documents"
-              html-for="portfolio-documents"
-              full
-              hint="One document per line: File Name.pdf | PDF | 2.4 MB"
-            >
-              <textarea
-                id="portfolio-documents"
-                v-model="form.documentsText"
-                rows="4"
-                placeholder="Project Proposal.pdf | PDF | 2.4 MB"
-                class="py-2 leading-relaxed"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              />
-            </CmsFormField>
-          </CmsFormSection>
-
-          <CmsFormSection
-            title="Technology Stack"
-            description="Technologies and platforms used in delivery."
-            icon="i-lucide-cpu"
-          >
-            <CmsFormField
-              label="Technologies"
-              full
-            >
-              <CmsOptionChips
-                v-model="form.technologies"
-                :options="cmsTechnologyOptions"
-                empty-label="Select at least one technology used in this project."
-              />
-            </CmsFormField>
-          </CmsFormSection>
-
-          <CmsFormSection
-            title="Related Partners"
-            description="Partners involved in delivering the project."
-            icon="i-lucide-handshake"
-          >
-            <CmsFormField
-              label="Partners"
-              full
-            >
-              <CmsOptionChips
-                v-model="partnerNames"
-                :options="cmsRelatedPartnerFilterOptions"
-                empty-label="Select the partners related to this portfolio item."
-              />
-            </CmsFormField>
-          </CmsFormSection>
-
-          <CmsFormSection
-            title="Publish Settings"
-            description="Status, visibility, and search metadata."
-            icon="i-lucide-send"
-          >
-            <CmsFormField
-              label="Current Status"
-              hint="Use the action buttons below to change the publication state."
-            >
-              <div class="flex h-9 items-center">
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
-                  <span class="h-1.5 w-1.5 rounded-full bg-slate-400" />
-                  {{ currentStatusLabel }}
+                <span class="font-medium text-slate-500">Estimated Net Profit:</span>
+                <span class="font-bold text-slate-900">
+                  Rp {{ (estimatedProfit || 0).toLocaleString('id-ID') }}
                 </span>
               </div>
             </CmsFormField>
+          </CmsFormSection>
 
-            <CmsFormField
-              label="Scheduled Publication"
-              html-for="portfolio-scheduled-at"
-              :error="errors.scheduledAt"
-              hint="Browser local time. Used by the Schedule action."
-            >
-              <input
-                id="portfolio-scheduled-at"
-                v-model="form.scheduledAt"
-                type="datetime-local"
-                :min="formatCmsDateTimeLocalValue()"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.scheduledAt))]"
-                @input="clearError('scheduledAt')"
+          <!-- 5. PROJECT CONTENT & CASE STUDY -->
+          <CmsFormSection
+            v-model:open="openSections['project-content']"
+            title="Project Content & Case Study"
+            description="Objectives, background narrative, challenges, and solutions."
+            icon="i-lucide-file-text"
+            collapsible
+          >
+            <!-- Enable Editing Checkbox (KIRI) -->
+            <div class="sm:col-span-2 -mt-1 mb-2.5 flex items-center justify-start">
+              <label
+                class="inline-flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-slate-600 hover:text-slate-900"
               >
-            </CmsFormField>
+                <input
+                  v-model="allowEdit['project-content']"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span :class="{ 'font-bold text-blue-600': allowEdit['project-content'] }">
+                  {{
+                    allowEdit['project-content']
+                      ? 'Editing enabled'
+                      : 'Enable editing for this section'
+                  }}
+                </span>
+              </label>
+            </div>
 
-            <CmsFormField
-              label="Visibility"
-              html-for="portfolio-visibility"
-            >
-              <select
-                id="portfolio-visibility"
-                v-model="form.visibility"
-                class="h-9"
+            <CmsFormField full label="Project Objective" required>
+              <textarea
+                v-model="form.project_objective"
+                rows="2"
+                placeholder="Brief statement of project goals"
+                :disabled="!allowEdit['project-content']"
+                class="py-2 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
-                <option value="Internal">
-                  Internal
-                </option>
-              </select>
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Author"
-              html-for="portfolio-author"
-              required
-              :error="errors.author"
-            >
-              <select
-                id="portfolio-author"
-                v-model="form.author"
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.author))]"
-                @change="clearError('author')"
+            <!-- Rich Text Editor dengan proteksi container -->
+            <CmsFormField full label="Project Description">
+              <div
+                :class="{
+                  'pointer-events-none opacity-60 bg-slate-50/80 rounded-lg cursor-not-allowed':
+                    !allowEdit['project-content']
+                }"
               >
-                <option
-                  value=""
-                  disabled
+                <CmsRichTextEditor v-model="form.project_description" />
+              </div>
+            </CmsFormField>
+
+            <CmsFormField full label="Background">
+              <textarea
+                v-model="form.project_background"
+                rows="2"
+                placeholder="Context leading to the project"
+                :disabled="!allowEdit['project-content']"
+                class="py-2 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField full label="Challenges">
+              <textarea
+                v-model="form.project_challenges"
+                rows="2"
+                placeholder="Obstacles encountered"
+                :disabled="!allowEdit['project-content']"
+                class="py-2 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <CmsFormField full label="Solutions">
+              <textarea
+                v-model="form.project_solution"
+                rows="2"
+                placeholder="Solutions delivered"
+                :disabled="!allowEdit['project-content']"
+                class="py-2 disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed"
+                :class="[cmsControlClass, cmsControlStateClass(false)]"
+              />
+            </CmsFormField>
+
+            <!-- SUCCESS METRICS (LENGKAP: ADD + DELETE) -->
+            <CmsFormField full label="Success Metrics">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-500">Measurable impact and achievements</span>
+                  <button
+                    type="button"
+                    :disabled="!allowEdit['project-content']"
+                    class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    @click="addSuccessMetric"
+                  >
+                    <UIcon name="i-lucide-plus" class="h-3.5 w-3.5" />
+                    <span>Add Metric</span>
+                  </button>
+                </div>
+
+                <div
+                  v-for="(metric, idx) in form.success_metrics"
+                  :key="idx"
+                  class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200"
                 >
-                  Select author
-                </option>
-                <option
-                  v-for="option in cmsAuthorOptions"
-                  :key="option.value"
-                  :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
+                  <input
+                    v-model="metric.success_metric_value"
+                    type="text"
+                    placeholder="e.g. +60% or $2M"
+                    :disabled="!allowEdit['project-content']"
+                    class="h-8 w-1/3 text-xs rounded-lg border border-slate-200 bg-white px-2.5 focus:border-blue-500 focus:outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  />
+                  <input
+                    v-model="metric.success_metric_label"
+                    type="text"
+                    placeholder="Metric description (e.g. Increase in User Adoption)"
+                    :disabled="!allowEdit['project-content']"
+                    class="h-8 flex-1 text-xs rounded-lg border border-slate-200 bg-white px-2.5 focus:border-blue-500 focus:outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  />
+                  <button
+                    type="button"
+                    :disabled="!allowEdit['project-content']"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    @click="removeSuccessMetric(idx)"
+                  >
+                    <UIcon name="i-lucide-trash-2" class="h-4 w-4" />
+                  </button>
+                </div>
+
+                <p v-if="!form.success_metrics.length" class="text-xs text-slate-400 italic">
+                  No success metrics added yet.
+                </p>
+              </div>
             </CmsFormField>
           </CmsFormSection>
-        </div>
 
-        <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-          <button
-            type="button"
-            class="inline-flex h-9 min-w-20 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-2xs transition-all hover:bg-slate-50 active:scale-95 cursor-pointer"
-            @click="emit('close')"
+          <!-- 6. PRODUCTS, TECHNOLOGIES & PARTNERS -->
+          <CmsFormSection
+            v-model:open="openSections['products-tech-partners']"
+            title="Products, Technologies & Partners"
+            description="Associate company products, technology stacks, and collaborating vendors."
+            icon="i-lucide-cpu"
+            collapsible
           >
-            Cancel
-          </button>
+            <!-- Enable Editing Checkbox (KIRI) -->
+            <div class="sm:col-span-2 -mt-1 mb-2.5 flex items-center justify-start">
+              <label
+                class="inline-flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-slate-600 hover:text-slate-900"
+              >
+                <input
+                  v-model="allowEdit['products-tech-partners']"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span :class="{ 'font-bold text-blue-600': allowEdit['products-tech-partners'] }">
+                  {{
+                    allowEdit['products-tech-partners']
+                      ? 'Editing enabled'
+                      : 'Enable editing for this section'
+                  }}
+                </span>
+              </label>
+            </div>
 
-          <button
-            type="button"
-            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 active:scale-95 cursor-pointer"
-            @click="handleSubmit('draft')"
-          >
-            <UIcon
-              name="i-lucide-file-pen-line"
-              class="h-3.5 w-3.5"
-            />
-            Save as Draft
-          </button>
+            <CmsFormField full label="Associated Products">
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="prod in productOptions"
+                  :key="prod.value"
+                  type="button"
+                  :disabled="!allowEdit['products-tech-partners']"
+                  class="rounded-lg px-2.5 py-1 text-xs font-medium border cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  :class="
+                    form.product_ids.includes(prod.value)
+                      ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  "
+                  @click="toggleProduct(prod.value)"
+                >
+                  {{ prod.label }}
+                </button>
+              </div>
+            </CmsFormField>
 
-          <button
-            type="button"
-            class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-4 text-xs font-semibold text-sky-700 shadow-2xs transition-all hover:bg-sky-100 active:scale-95 cursor-pointer"
-            @click="handleSubmit('schedule')"
-          >
-            <UIcon
-              name="i-lucide-calendar-clock"
-              class="h-3.5 w-3.5"
-            />
-            Schedule
-          </button>
+            <CmsFormField full label="Tech Stacks">
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="tech in techStackOptions"
+                  :key="tech.value"
+                  type="button"
+                  :disabled="!allowEdit['products-tech-partners']"
+                  class="rounded-lg px-2.5 py-1 text-xs font-medium border cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  :class="
+                    form.tech_stack_ids.includes(tech.value)
+                      ? 'border-blue-600 bg-blue-50 text-blue-700 font-semibold'
+                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                  "
+                  @click="toggleTechStack(tech.value)"
+                >
+                  {{ tech.label }}
+                </button>
+              </div>
+            </CmsFormField>
 
-          <button
-            type="button"
-            class="inline-flex h-9 min-w-28 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-blue-700 active:scale-95 cursor-pointer"
-            @click="handleSubmit('publish')"
+            <!-- INVOLVED PARTNERS (LENGKAP: ADD + DELETE) -->
+            <CmsFormField full label="Involved Partners">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-500">Collaborating principals or vendors</span>
+                  <button
+                    type="button"
+                    :disabled="!allowEdit['products-tech-partners']"
+                    class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    @click="addPartner"
+                  >
+                    <UIcon name="i-lucide-plus" class="h-3.5 w-3.5" />
+                    <span>Add Partner</span>
+                  </button>
+                </div>
+
+                <div
+                  v-for="(partner, idx) in form.partners"
+                  :key="idx"
+                  class="flex flex-wrap sm:flex-nowrap items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-200"
+                >
+                  <!-- Dropdown 1: Pilih Nama Partner (AWS, Google, dll) -->
+                  <select
+                    v-model="partner.partner_id"
+                    :disabled="!allowEdit['products-tech-partners']"
+                    class="h-8 flex-1 text-xs rounded-lg border border-slate-200 bg-white px-2.5 focus:border-blue-500 focus:outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Select Partner</option>
+                    <option v-for="p in partnerList" :key="p.value" :value="p.value">
+                      {{ p.label }}
+                    </option>
+                  </select>
+
+                  <!-- Dropdown 2: Pilih Role (Principal / Vendor) -->
+                  <select
+                    v-model="partner.partner_role"
+                    :disabled="!allowEdit['products-tech-partners']"
+                    class="h-8 w-32 text-xs rounded-lg border border-slate-200 bg-white px-2.5 focus:border-blue-500 focus:outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  >
+                    <option
+                      v-for="role in partnerRoleOptions"
+                      :key="role.value"
+                      :value="role.value"
+                    >
+                      {{ role.label }}
+                    </option>
+                  </select>
+
+                  <input
+                    v-model="partner.partner_contribution"
+                    type="text"
+                    placeholder="Contribution note..."
+                    :disabled="!allowEdit['products-tech-partners']"
+                    class="h-8 flex-1 text-xs rounded-lg border border-slate-200 bg-white px-2.5 focus:border-blue-500 focus:outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  />
+
+                  <button
+                    type="button"
+                    :disabled="!allowEdit['products-tech-partners']"
+                    class="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    @click="removePartner(idx)"
+                  >
+                    <UIcon name="i-lucide-trash-2" class="h-4 w-4" />
+                  </button>
+                </div>
+
+                <p v-if="!form.partners.length" class="text-xs text-slate-400 italic">
+                  No partners added yet.
+                </p>
+              </div>
+            </CmsFormField>
+          </CmsFormSection>
+
+          <!-- 7. MEDIA & DOCUMENTS -->
+          <CmsFormSection
+            v-model:open="openSections['media-documents']"
+            title="Media & Documents"
+            description="Visual assets, gallery, downloadable case studies, and documents."
+            icon="i-lucide-image"
+            collapsible
           >
-            <UIcon
-              name="i-lucide-send"
-              class="h-3.5 w-3.5"
-            />
-            Publish Now
-          </button>
-        </div>
-      </form>
+            <!-- Enable Editing Checkbox (KIRI) -->
+            <div class="sm:col-span-2 -mt-1 mb-2.5 flex items-center justify-start">
+              <label
+                class="inline-flex items-center gap-2 text-xs font-medium cursor-pointer select-none text-slate-600 hover:text-slate-900"
+              >
+                <input
+                  v-model="allowEdit['media-documents']"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span :class="{ 'font-bold text-blue-600': allowEdit['media-documents'] }">
+                  {{
+                    allowEdit['media-documents']
+                      ? 'Editing enabled'
+                      : 'Enable editing for this section'
+                  }}
+                </span>
+              </label>
+            </div>
+
+            <!-- Featured Cover -->
+            <CmsFormField
+              full
+              label="Featured Cover Image"
+              hint="Primary visual shown on cards & hero header"
+            >
+              <div
+                :class="{
+                  'pointer-events-none opacity-50 cursor-not-allowed': !allowEdit['media-documents']
+                }"
+              >
+                <div
+                  v-if="featuredCover"
+                  class="relative overflow-hidden rounded-xl border border-slate-200 bg-slate-100 max-w-sm"
+                >
+                  <img
+                    :src="featuredCover.previewUrl"
+                    alt="Cover"
+                    class="h-36 w-full object-cover"
+                  />
+                  <button
+                    v-if="allowEdit['media-documents']"
+                    type="button"
+                    class="absolute top-2 right-2 rounded-md bg-slate-900/70 p-1 text-white hover:bg-rose-600 transition-colors cursor-pointer"
+                    @click="removeCoverImage"
+                  >
+                    <UIcon name="i-lucide-trash-2" class="h-4 w-4" />
+                  </button>
+                </div>
+                <CmsUploadArea
+                  v-else
+                  label="Upload Cover Image"
+                  hint="PNG, JPG up to 10MB"
+                  accept="image/*"
+                  @files="handleCoverImage"
+                />
+              </div>
+            </CmsFormField>
+
+            <!-- Media Gallery Images -->
+            <CmsFormField full label="Gallery Images" hint="Additional screenshots and media">
+              <div
+                class="space-y-3"
+                :class="{
+                  'pointer-events-none opacity-50 cursor-not-allowed': !allowEdit['media-documents']
+                }"
+              >
+                <CmsUploadArea
+                  label="Add Gallery Images"
+                  hint="PNG, JPG, multiple files allowed"
+                  accept="image/*"
+                  multiple
+                  @files="handleGalleryImages"
+                />
+
+                <div v-if="galleryFiles.length" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div
+                    v-for="(img, idx) in galleryFiles"
+                    :key="idx"
+                    class="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-100 group h-24"
+                  >
+                    <img :src="img.previewUrl" alt="Gallery" class="h-full w-full object-cover" />
+                    <button
+                      v-if="allowEdit['media-documents']"
+                      type="button"
+                      class="absolute top-1 right-1 rounded bg-black/60 p-1 text-white hover:bg-rose-600 transition-colors cursor-pointer"
+                      @click="removeGalleryImage(idx)"
+                    >
+                      <UIcon name="i-lucide-trash-2" class="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </CmsFormField>
+
+            <!-- Case Study PDF -->
+            <CmsFormField full label="Case Study (PDF)">
+              <div
+                :class="{
+                  'pointer-events-none opacity-50 cursor-not-allowed': !allowEdit['media-documents']
+                }"
+              >
+                <div
+                  v-if="caseStudyFile"
+                  class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200"
+                >
+                  <div class="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                    <UIcon name="i-lucide-file-text" class="h-4 w-4 text-rose-500" />
+                    <span>{{ caseStudyFile.title }}</span>
+                  </div>
+                  <button
+                    v-if="allowEdit['media-documents']"
+                    type="button"
+                    class="text-slate-400 hover:text-rose-600 cursor-pointer"
+                    @click="caseStudyFile = null"
+                  >
+                    <UIcon name="i-lucide-trash-2" class="h-4 w-4" />
+                  </button>
+                </div>
+                <CmsUploadArea
+                  v-else
+                  label="Upload Case Study PDF"
+                  hint="PDF up to 25MB"
+                  accept=".pdf,application/pdf"
+                  @files="handleCaseStudy"
+                />
+              </div>
+            </CmsFormField>
+
+            <!-- Supporting Documents -->
+            <CmsFormField full label="Supporting Documents">
+              <div
+                class="space-y-2"
+                :class="{
+                  'pointer-events-none opacity-50 cursor-not-allowed': !allowEdit['media-documents']
+                }"
+              >
+                <CmsUploadArea
+                  label="Add Supporting Documents"
+                  hint="PDF, DOCX, XLSX up to 25MB"
+                  multiple
+                  @files="handleSupportingDocuments"
+                />
+
+                <div v-if="supportingDocuments.length" class="space-y-1">
+                  <div
+                    v-for="(doc, idx) in supportingDocuments"
+                    :key="idx"
+                    class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200 text-xs"
+                  >
+                    <div class="flex items-center gap-2 text-slate-700 truncate">
+                      <UIcon name="i-lucide-paperclip" class="h-3.5 w-3.5 text-slate-400" />
+                      <span class="truncate">{{ doc.title }}</span>
+                    </div>
+                    <button
+                      v-if="allowEdit['media-documents']"
+                      type="button"
+                      class="text-slate-400 hover:text-rose-600 cursor-pointer"
+                      @click="removeSupportingDocument(idx)"
+                    >
+                      <UIcon name="i-lucide-trash-2" class="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </CmsFormField>
+          </CmsFormSection>
+        </template>
+      </div>
+
+      <!-- Modal Footer -->
+      <div
+        class="flex items-center justify-end gap-2 border-t border-slate-100 px-6 py-4 bg-slate-50/50 shrink-0"
+      >
+        <button
+          type="button"
+          class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer"
+          @click="emit('close')"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          :disabled="isSubmitting || portfolioStore.isDetailLoading"
+          class="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 cursor-pointer disabled:opacity-50"
+        >
+          {{ isSubmitting ? submitProgressText || 'Saving...' : 'Save Changes' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
