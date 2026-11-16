@@ -3,6 +3,7 @@ import { ref, reactive, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import type { CmsPortfolioContent } from '../../types/cms.types'
 import { usePortfolioStore } from '~/modules/portofolio/stores/portofolio.store'
 import { useMasterDataStore } from '~/modules/portofolio/stores/master-data.store'
+import { projectApi } from '~/modules/cms/api/project.api'
 import { cmsControlClass, cmsControlStateClass } from '../../utils/cmsForm'
 import CmsFormField from './CmsFormField.vue'
 import CmsFormSection from './CmsFormSection.vue'
@@ -22,40 +23,55 @@ const emit = defineEmits<{
   (e: 'save'): void
 }>()
 
-// 1. Inisialisasi Store Resmi
+const toast = useToast()
+
+// 1. Inisialisasi Stores
 const portfolioStore = usePortfolioStore()
 const masterDataStore = useMasterDataStore()
 
+// 2. Inisialisasi Form State & Logic dari Composable
+const {
+  form,
+  estimatedProfit,
+  populateFormFromStore,
+  preparePayloads,
+  addPartner,
+  removePartner,
+  addSuccessMetric,
+  removeSuccessMetric
+} = useCmsPortfolioForm()
+
+// Media local states (untuk cover preview dan case study)
 const featuredCover = ref<any>(null)
 const galleryFiles = ref<any[]>([])
 const caseStudyFile = ref<any>(null)
 const supportingDocuments = ref<any[]>([])
 
-// 1. Opsi Role Partner untuk dropdown kedua (Principal / Vendor)
+// Partner dropdown options
 const partnerRoleOptions = [
   { value: 'principal', label: 'Principal' },
-  { value: 'vendor', label: 'Vendor' },
-  { value: 'distributor', label: 'Distributor' },
-  { value: 'subcontractor', label: 'Subcontractor' }
+  { value: 'vendor', label: 'Vendor' }
 ]
-
-// 2. State untuk list Master Partner dari API (diambil saat mount)
-import { projectApi } from '~/modules/cms/api/project.api'
 const partnerList = ref<{ label: string; value: string }[]>([])
 
-// Load Master Data & Partners
-onMounted(async () => {
+// Fungsi untuk memuat master data & partners HANYA saat dibutuhkan (Lazy Load)
+const loadOptionsOnDemand = async () => {
+  // fetchAllMasterData di store sudah pintar: jika sudah pernah ter-load, tidak akan nembak API lagi
   masterDataStore.fetchAllMasterData()
-  try {
-    const resPartners = await projectApi.getPartners()
-    partnerList.value = (resPartners || []).map((p: any) => ({
-      label: p.partner_name || p.name || '',
-      value: p.id
-    }))
-  } catch (err) {
-    console.error('Failed to load partners', err)
+
+  // Partners hanya di-fetch jika partnerList masih kosong
+  if (partnerList.value.length === 0) {
+    try {
+      const resPartners = await projectApi.getPartners()
+      partnerList.value = (resPartners || []).map((p: any) => ({
+        label: p.partner_name || p.name || '',
+        value: p.id
+      }))
+    } catch (err) {
+      console.error('Failed to load partners', err)
+    }
   }
-})
+}
 
 // Options dropdown Master Data
 const businessUnitOptions = computed(() => masterDataStore.businessUnitOptions)
@@ -65,14 +81,13 @@ const companySizeOptions = computed(() => masterDataStore.companySizeOptions)
 const customerTypeOptions = computed(() => masterDataStore.customerTypeOptions)
 const legalStructureOptions = computed(() => masterDataStore.legalStructureOptions)
 const productOptions = computed(() => masterDataStore.productOptions)
-
-// FIX TECH STACK: Ambil dari raw list masterDataStore.techStacks!
 const techStackOptions = computed(() => {
   return (masterDataStore.techStacks || []).map((t: any) => ({
     label: t.tech_stack_name || t.name || '',
     value: t.id
   }))
 })
+
 // State Section Accordion
 const openSections = reactive<Record<string, boolean>>({
   'project-information': true,
@@ -84,7 +99,7 @@ const openSections = reactive<Record<string, boolean>>({
   'media-documents': true
 })
 
-// State Allow Edit: Default FALSE (Unchecked = Disabled)
+// State Allow Edit Checkbox (Default false)
 const allowEdit = reactive<Record<string, boolean>>({
   'project-information': false,
   'customer-information': false,
@@ -95,30 +110,44 @@ const allowEdit = reactive<Record<string, boolean>>({
   'media-documents': false
 })
 
-const {
-  form,
-  estimatedProfit,
-  populateFormFromStore,
-  addPartner,
-  removePartner,
-  addSuccessMetric,
-  removeSuccessMetric
-} = useCmsPortfolioForm()
+// Fungsi helper untuk mereset semua checkbox allowEdit kembali ke false
+const resetAllowEdit = () => {
+  Object.keys(allowEdit).forEach((key) => {
+    allowEdit[key] = false
+  })
+}
 
-// Watcher: Saat modal dibuka, panggil Store untuk load data detail
+// Watcher: Saat modal dibuka, fetch detail; Saat modal ditutup, reset checkbox!
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (!isOpen) {
+      // Saat modal ditutup (cancel / tombol X / klik luar / setelah save):
+      resetAllowEdit()
+    }
+  }
+)
+
 watch(
   () => [props.isOpen, props.content],
   async ([isOpen, content]) => {
-    if (isOpen && content?.id) {
-      const detail = await portfolioStore.fetchProjectDetail(content.id)
-      if (detail) {
-        populateFormFromStore(detail)
+    if (isOpen) {
+      // 1. Load Master Data secara on-demand (hanya saat modal terbuka)
+      loadOptionsOnDemand()
+
+      // 2. Fetch Detail Project yang sedang diedit
+      if (content?.id) {
+        const detail = await portfolioStore.fetchProjectDetail(content.id)
+        if (detail) {
+          populateFormFromStore(detail)
+        }
       }
     }
   },
   { immediate: true }
 )
 
+// Toggle helpers untuk Products & Tech Stacks
 const toggleProduct = (id: string) => {
   if (!allowEdit['products-tech-partners']) return
   const idx = form.product_ids.indexOf(id)
@@ -133,13 +162,11 @@ const toggleTechStack = (id: string) => {
   else form.tech_stack_ids.splice(idx, 1)
 }
 
-// Media upload handlers
+// Media handlers
 const handleCoverImage = (files: File[]) => {
   if (!files.length) return
   const file = files[0]
-  if (featuredCover.value?.previewUrl) {
-    URL.revokeObjectURL(featuredCover.value.previewUrl)
-  }
+  if (featuredCover.value?.previewUrl) URL.revokeObjectURL(featuredCover.value.previewUrl)
   featuredCover.value = {
     file,
     category: 'image',
@@ -147,14 +174,10 @@ const handleCoverImage = (files: File[]) => {
     previewUrl: URL.createObjectURL(file)
   }
 }
-
 const removeCoverImage = () => {
-  if (featuredCover.value?.previewUrl) {
-    URL.revokeObjectURL(featuredCover.value.previewUrl)
-  }
+  if (featuredCover.value?.previewUrl) URL.revokeObjectURL(featuredCover.value.previewUrl)
   featuredCover.value = null
 }
-
 const handleGalleryImages = (files: File[]) => {
   files.forEach((file) => {
     galleryFiles.value.push({
@@ -165,35 +188,20 @@ const handleGalleryImages = (files: File[]) => {
     })
   })
 }
-
 const removeGalleryImage = (index: number) => {
   const item = galleryFiles.value[index]
-  if (item?.previewUrl) {
-    URL.revokeObjectURL(item.previewUrl)
-  }
+  if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl)
   galleryFiles.value.splice(index, 1)
 }
-
 const handleCaseStudy = (files: File[]) => {
   if (!files.length) return
-  const file = files[0]
-  caseStudyFile.value = {
-    file,
-    category: 'case_study',
-    title: file.name
-  }
+  caseStudyFile.value = { file: files[0], category: 'case_study', title: files[0].name }
 }
-
 const handleSupportingDocuments = (files: File[]) => {
   files.forEach((file) => {
-    supportingDocuments.value.push({
-      file,
-      category: 'document',
-      title: file.name
-    })
+    supportingDocuments.value.push({ file, category: 'document', title: file.name })
   })
 }
-
 const removeSupportingDocument = (index: number) => {
   supportingDocuments.value.splice(index, 1)
 }
@@ -202,6 +210,51 @@ onBeforeUnmount(() => {
   if (featuredCover.value?.previewUrl) URL.revokeObjectURL(featuredCover.value.previewUrl)
   galleryFiles.value.forEach((i) => i.previewUrl && URL.revokeObjectURL(i.previewUrl))
 })
+
+// Submitting state & Handler Save Changes
+const isSubmitting = ref(false)
+
+const handleSave = async () => {
+  if (!props.content?.id) return
+
+  // 1. Ambil payload tasks yang terseleksi
+  const tasks = preparePayloads(allowEdit)
+
+  // 2. Validasi: Jangan panggil store jika tidak ada section yang di-enable
+  if (Object.keys(tasks).length === 0) {
+    toast.add({
+      title: 'No Section Enabled',
+      description: 'Please enable editing on at least one section before saving.',
+      color: 'warning'
+    })
+    return
+  }
+
+  isSubmitting.value = true
+  try {
+    // 3. Panggil action store untuk update modular
+    await portfolioStore.updateProjectSectional(props.content.id, tasks)
+
+    // Toast Sukses dengan Progress Bar Hijau Berjalan
+    toast.add({
+      title: 'Changes Saved',
+      description: 'Portfolio project has been updated successfully.',
+      color: 'success'
+    })
+
+    emit('save')
+    emit('close')
+  } catch (err: any) {
+    // Toast Gagal dengan Progress Bar Merah Berjalan
+    toast.add({
+      title: 'Failed to Save',
+      description: err?.response?.data?.message || err?.message || 'Something went wrong.',
+      color: 'error'
+    })
+  } finally {
+    isSubmitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -1129,6 +1182,7 @@ onBeforeUnmount(() => {
         </button>
         <button
           type="button"
+          @click="handleSave"
           :disabled="isSubmitting || portfolioStore.isDetailLoading"
           class="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 cursor-pointer disabled:opacity-50"
         >

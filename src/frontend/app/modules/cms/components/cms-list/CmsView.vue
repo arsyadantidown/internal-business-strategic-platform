@@ -104,34 +104,14 @@ const saveActionPast: Record<CmsContentSaveAction, string> = {
   publish: 'published'
 }
 
-const handleSavePortfolio = (values: CmsPortfolioFormValues, action: CmsContentSaveAction) => {
-  if (editingPortfolio.value) {
-    const updated = updateContent('portfolio', editingPortfolio.value.id, values)
-
-    if (updated) {
-      toast.add({
-        title: 'Portfolio content updated',
-        description: `"${updated.title}" was ${saveActionPast[action]} successfully.`,
-        color: 'success'
-      })
-    } else {
-      toast.add({
-        title: 'Update failed',
-        description: 'The selected portfolio content could not be found.',
-        color: 'error'
-      })
-    }
-  } else {
-    const created = createContent('portfolio', values)
-    resetFilters()
-    setPage(1)
-    toast.add({
-      title: 'Portfolio content created',
-      description: `"${created.title}" was ${saveActionPast[action]} successfully.`,
-      color: 'success'
-    })
-  }
-
+// Cukup refresh list data setelah modal sukses menyimpan
+const handleSavePortfolio = () => {
+  // Ambil data terbaru dengan mempertahankan halaman & pageSize yang sedang aktif
+  portfolioStore.fetchProjects({
+    page: currentPage.value,
+    page_size: pageSize.value,
+    search: filters.value.search || undefined
+  })
   isPortfolioFormOpen.value = false
   editingContent.value = null
 }

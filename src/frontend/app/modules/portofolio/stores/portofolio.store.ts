@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { portfolioApi } from '../api/portofolio.api'
+import { projectApi } from '~/modules/cms/api/project.api'
 import { useAppDate } from '~/composables/useAppDate' // <-- Import composable
 import type {
   ProjectItem,
@@ -262,6 +263,79 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     }
   }
 
+  /**
+   * Action untuk Update Project secara modular/seksional
+   * Menembak endpoint-endpoint yang relevan secara paralel, lalu me-refresh list
+   */
+  const updateProjectSectional = async (
+    projectId: string,
+    tasks: {
+      patchProject?: any
+      customer?: any
+      financial?: { cogs: number; operational_cost: number }
+      products?: string[]
+      techStacks?: string[]
+      partners?: any[]
+      successMetrics?: any[]
+    }
+  ) => {
+    isLoading.value = true
+    errorMessage.value = null
+
+    try {
+      const apiCalls: Promise<any>[] = []
+
+      // 1. PATCH /api/v1/projects/{id}
+      if (tasks.patchProject) {
+        apiCalls.push(projectApi.updateProject(projectId, tasks.patchProject))
+      }
+
+      // 2. PUT /api/v1/projects/{id}/customer
+      if (tasks.customer) {
+        apiCalls.push(projectApi.updateCustomer(projectId, tasks.customer))
+      }
+
+      // 3. PUT /api/v1/projects/{id}/financial
+      if (tasks.financial) {
+        apiCalls.push(projectApi.updateFinancial(projectId, tasks.financial))
+      }
+
+      // 4. PUT /api/v1/projects/{id}/products
+      if (tasks.products) {
+        apiCalls.push(projectApi.updateProducts(projectId, tasks.products))
+      }
+
+      // 5. PUT /api/v1/projects/{id}/tech-stacks
+      if (tasks.techStacks) {
+        apiCalls.push(projectApi.updateTechStacks(projectId, tasks.techStacks))
+      }
+
+      // 6. PUT /api/v1/projects/{id}/partners
+      if (tasks.partners) {
+        apiCalls.push(projectApi.updatePartners(projectId, tasks.partners))
+      }
+
+      // 7. PUT /api/v1/projects/{id}/success-metrics
+      if (tasks.successMetrics) {
+        apiCalls.push(projectApi.updateSuccessMetrics(projectId, tasks.successMetrics))
+      }
+
+      // Eksekusi semua panggilan API secara paralel
+      await Promise.all(apiCalls)
+
+      // Refresh data list tabel secara otomatis
+      await fetchProjects()
+
+      return { success: true }
+    } catch (err: any) {
+      errorMessage.value =
+        err?.response?.data?.message || err?.message || 'Gagal memperbarui project'
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
     projects,
     isLoading,
@@ -275,6 +349,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     detailError,
     fetchProjectDetail,
     fetchProjects,
-    deleteProject
+    deleteProject,
+    updateProjectSectional
   }
 })
