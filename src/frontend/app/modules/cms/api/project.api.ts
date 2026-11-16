@@ -87,5 +87,79 @@ export const projectApi = {
   async getPartners(): Promise<any[]> {
     const response = await apiClient.get(ENDPOINTS.PARTNERS.BASE)
     return response.data?.data || []
+  },
+
+  /**
+   * Update Main Project (PATCH)
+   * PATCH /api/v1/projects/{project_id}
+   */
+  async updateProject(projectId: string, payload: any): Promise<any> {
+    const response = await apiClient.patch(ENDPOINTS.PROJECTS.DETAIL(projectId), payload)
+    return response.data
+  },
+
+  /**
+   * Update Customer Information (PUT)
+   * PUT /api/v1/projects/{project_id}/customer
+   */
+  async updateCustomer(projectId: string, payload: any): Promise<any> {
+    const response = await apiClient.put(ENDPOINTS.PROJECTS.CUSTOMER(projectId), payload)
+    return response.data
+  },
+
+  /**
+   * Update Financial Information (PUT)
+   * PUT /api/v1/projects/{project_id}/financial
+   */
+  async updateFinancial(
+    projectId: string,
+    payload: { cogs: number; operational_cost: number }
+  ): Promise<any> {
+    const response = await apiClient.put(ENDPOINTS.PROJECTS.FINANCIAL(projectId), payload)
+    return response.data
+  },
+
+  /**
+   * Update Products Association (PUT)
+   * PUT /api/v1/projects/{project_id}/products
+   */
+  async updateProducts(projectId: string, productIds: string[]): Promise<any> {
+    const response = await apiClient.put(ENDPOINTS.PROJECTS.PRODUCTS(projectId), {
+      product_ids: productIds
+    })
+    return response.data
+  },
+
+  /**
+   * Update Tech Stacks Association (PUT)
+   * PUT /api/v1/projects/{project_id}/tech-stacks
+   */
+  async updateTechStacks(projectId: string, techStackIds: string[]): Promise<any> {
+    const response = await apiClient.put(ENDPOINTS.PROJECTS.TECH_STACKS(projectId), {
+      tech_stack_ids: techStackIds
+    })
+    return response.data
+  },
+
+  /**
+   * Update Partners Association (PUT)
+   * PUT /api/v1/projects/{project_id}/partners
+   */
+  async updatePartners(projectId: string, partners: any[]): Promise<any> {
+    const response = await apiClient.put(ENDPOINTS.PROJECTS.PARTNERS(projectId), {
+      partners
+    })
+    return response.data
+  },
+
+  /**
+   * Update Success Metrics (PUT)
+   * PUT /api/v1/projects/{project_id}/success-metrics
+   */
+  async updateSuccessMetrics(projectId: string, successMetrics: any[]): Promise<any> {
+    const response = await apiClient.put(ENDPOINTS.PROJECTS.SUCCESS_METRICS(projectId), {
+      success_metrics: successMetrics
+    })
+    return response.data
   }
 }
