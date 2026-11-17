@@ -158,6 +158,33 @@ onBeforeUnmount(() => {
   if (featuredCover.value?.previewUrl) URL.revokeObjectURL(featuredCover.value.previewUrl)
   galleryFiles.value.forEach((i) => i.previewUrl && URL.revokeObjectURL(i.previewUrl))
 })
+
+const isYearOpen = ref(false)
+
+const currentYear = new Date().getFullYear()
+// Tahun dasar untuk menentukan dekade (misal 2026 -> 2020)
+const yearPickerBase = ref(Math.floor((form.year || currentYear) / 12) * 12)
+
+// Menghasilkan 12 tahun dalam 1 tampilan grid (misal: 2020 s/d 2031)
+const displayedYears = computed(() => {
+  const start = yearPickerBase.value
+  return Array.from({ length: 12 }, (_, i) => start + i)
+})
+
+// Navigasi mundur 12 tahun
+const prevYears = () => {
+  yearPickerBase.value -= 12
+}
+
+// Navigasi maju 12 tahun
+const nextYears = () => {
+  yearPickerBase.value += 12
+}
+
+const selectYear = (yr: number) => {
+  form.year = yr
+  isYearOpen.value = false // tutup popover
+}
 </script>
 
 <template>
@@ -299,17 +326,79 @@ onBeforeUnmount(() => {
               />
             </CmsFormField>
 
-            <CmsFormField label="Year" html-for="field-year" required>
-              <input
-                id="field-year"
-                v-model.number="form.year"
-                type="number"
-                min="1900"
-                max="2200"
-                required
-                class="h-9"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              />
+            <CmsFormField label="Year" required>
+              <div class="relative w-full">
+                <!-- Trigger Button -->
+                <button
+                  type="button"
+                  class="flex h-9 w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 shadow-xs hover:border-slate-300 focus:border-blue-500 focus:outline-none cursor-pointer transition-colors"
+                  @click="isYearOpen = !isYearOpen"
+                >
+                  <span
+                    :class="{
+                      'text-slate-400 font-normal': !form.year,
+                      'font-medium font-mono text-slate-900': form.year
+                    }"
+                  >
+                    {{ form.year || 'Select Year' }}
+                  </span>
+                  <UIcon name="i-lucide-calendar" class="h-4 w-4 text-slate-400" />
+                </button>
+
+                <!-- Invisible Backdrop (Untuk menutup popover jika klik di luar) -->
+                <div v-if="isYearOpen" class="fixed inset-0 z-40" @click="isYearOpen = false" />
+
+                <!-- Popover Panel (Muncul tepat di bawah button) -->
+                <div
+                  v-if="isYearOpen"
+                  class="absolute left-0 top-full mt-1.5 z-50 w-64 rounded-xl border border-slate-200 bg-white p-3 shadow-2xl font-sans"
+                >
+                  <!-- Header: Rentang Tahun & Navigasi -->
+                  <div
+                    class="flex items-center justify-between mb-3 pb-2 border-b border-slate-100"
+                  >
+                    <span class="text-xs font-bold text-slate-700 font-mono">
+                      {{ displayedYears[0] }} – {{ displayedYears[displayedYears.length - 1] }}
+                    </span>
+                    <div class="flex items-center gap-1">
+                      <button
+                        type="button"
+                        class="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer transition-colors"
+                        @click.stop="prevYears"
+                      >
+                        <UIcon name="i-lucide-chevron-left" class="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        class="p-1 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 cursor-pointer transition-colors"
+                        @click.stop="nextYears"
+                      >
+                        <UIcon name="i-lucide-chevron-right" class="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Grid 12 Tahun (3 kolom x 4 baris) -->
+                  <div class="grid grid-cols-3 gap-1.5">
+                    <button
+                      v-for="yr in displayedYears"
+                      :key="yr"
+                      type="button"
+                      class="py-2 text-xs rounded-lg font-medium transition-all cursor-pointer font-mono text-center"
+                      :class="
+                        form.year === yr
+                          ? 'bg-blue-600 text-white font-bold shadow-xs'
+                          : yr === currentYear
+                            ? 'border border-blue-200 text-blue-600 bg-blue-50/50 hover:bg-blue-100'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                      "
+                      @click="selectYear(yr)"
+                    >
+                      {{ yr }}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </CmsFormField>
 
             <CmsFormField label="Business Unit" html-for="field-bu" required>
