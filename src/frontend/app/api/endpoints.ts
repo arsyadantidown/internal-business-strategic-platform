@@ -43,5 +43,10 @@ export const ENDPOINTS = {
   },
   PARTNERS: {
     BASE: '/api/v1/partners'
+  },
+  DASHBOARD: {
+    SUMMARY: '/api/v1/dashboard/summary',
+    PROJECTS_BY_BUSINESS_UNIT: '/api/v1/dashboard/projects-by-business-unit',
+    PROJECTS_BY_INDUSTRY: '/api/v1/dashboard/projects-by-industry'
   }
 } as const
