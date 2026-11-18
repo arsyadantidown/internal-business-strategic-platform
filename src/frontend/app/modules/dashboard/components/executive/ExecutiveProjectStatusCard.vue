@@ -102,7 +102,7 @@ const donutSegments = computed(() => {
 
         <!-- Center Label -->
         <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span class="text-xl font-extrabold text-slate-900 font-mono leading-none">
+          <span class="text-3xl font-extrabold text-slate-900 font-mono leading-none">
             {{ props.totalProjects }}
           </span>
           <span class="text-[9px] font-bold tracking-wider text-slate-400 mt-1 uppercase">

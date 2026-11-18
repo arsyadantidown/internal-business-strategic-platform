@@ -1,13 +1,18 @@
 <script setup lang="ts">
+// 1. Import icon SVG langsung dari assets/icon/
+import totalProjectIcon from '~/assets/icon/total-project.svg'
+import totalValueIcon from '~/assets/icon/total-value.svg'
+import totalRevenueIcon from '~/assets/icon/total-revenue.svg'
+import totalProfitIcon from '~/assets/icon/total-profit.svg'
+
 interface StatMetric {
   title: string
   value: string | number
-  icon: string
+  iconSrc: string
   badgeText: string
   subText: string
 }
 
-// Data mock default sesuai gambar desain baru
 const props = withDefaults(
   defineProps<{
     stats?: StatMetric[]
@@ -17,28 +22,28 @@ const props = withDefaults(
       {
         title: 'Total Projects',
         value: '2',
-        icon: 'i-lucide-archive',
+        iconSrc: totalProjectIcon,
         badgeText: '↗ 1 Active',
         subText: '50% completed'
       },
       {
         title: 'Total Value (Before Tax)',
         value: 'Rp 600.000.032',
-        icon: 'i-lucide-credit-card',
+        iconSrc: totalValueIcon,
         badgeText: '↗ +100%',
         subText: 'gross contract'
       },
       {
         title: 'Total Revenue',
         value: 'Rp 600.000.032',
-        icon: 'i-lucide-trending-up',
+        iconSrc: totalRevenueIcon,
         badgeText: '↗ 100%',
         subText: 'realized to date'
       },
       {
         title: 'Total Net Profit',
         value: 'Rp 519.996.530',
-        icon: 'i-lucide-shield-check',
+        iconSrc: totalProfitIcon,
         badgeText: '↗ 86.7%',
         subText: 'net margin'
       }
@@ -56,13 +61,8 @@ const props = withDefaults(
     >
       <!-- Top Row: Icon + Title & Value -->
       <div class="flex items-start gap-3.5">
-        <!-- Icon Container -->
-        <div
-          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50/80 text-blue-600"
-        >
-          <UIcon :name="item.icon" class="h-5 w-5" />
-        </div>
-
+        <!-- SVG Icon utuh dari Figma (44x44px) -->
+        <img :src="item.iconSrc" class="h-11 w-11 shrink-0 object-contain" :alt="item.title" />
         <!-- Metric Details -->
         <div class="min-w-0 flex-1">
           <p class="text-[11px] font-medium text-slate-500 truncate">
