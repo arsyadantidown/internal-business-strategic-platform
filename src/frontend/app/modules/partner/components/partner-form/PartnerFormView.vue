@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { cmsControlClass, cmsControlStateClass } from '~/modules/cms/utils/cmsForm'
-import { getPartnerErrorMessage, partnerApi } from '../../api/partner.api'
+import { usePartnerStore } from '../../stores/partner.store'
 import type {
   PartnerCategoryValue,
   PartnerDetail,
@@ -23,6 +23,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const store = usePartnerStore()
 
 const isEditMode = computed(() => props.editingId !== null)
 
@@ -97,12 +98,12 @@ const prepareForm = async () => {
 
   try {
     if (props.editingId) {
-      const loaded = await partnerApi.getDetail(props.editingId)
+      const loaded = await store.fetchPartnerDetail(props.editingId)
       detail.value = loaded
       applyDetail(loaded)
     }
   } catch (error) {
-    prepareError.value = getPartnerErrorMessage(error)
+    prepareError.value = error instanceof Error ? error.message : 'Something went wrong. Please try again.'
   } finally {
     isPreparing.value = false
   }
@@ -237,7 +238,7 @@ const handleSubmit = async () => {
 
   try {
     if (isEditMode.value && props.editingId && detail.value) {
-      const changes = partnerApi.getUpdateChanges(detail.value, form)
+      const changes = store.getUpdateChanges(detail.value, form)
 
       if (Object.keys(changes).length === 0) {
         toast.add({
@@ -248,7 +249,7 @@ const handleSubmit = async () => {
         return
       }
 
-      await partnerApi.update(props.editingId, detail.value, form)
+      await store.updatePartner(props.editingId, form, detail.value)
 
       toast.add({
         title: 'Partner updated',
@@ -256,7 +257,7 @@ const handleSubmit = async () => {
         color: 'success'
       })
     } else {
-      await partnerApi.create(form)
+      await store.createPartner(form)
 
       toast.add({
         title: 'Partner added',
@@ -269,7 +270,7 @@ const handleSubmit = async () => {
   } catch (error) {
     toast.add({
       title: isEditMode.value ? 'Failed to update partner' : 'Failed to add partner',
-      description: getPartnerErrorMessage(error),
+      description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
       color: 'error'
     })
   } finally {

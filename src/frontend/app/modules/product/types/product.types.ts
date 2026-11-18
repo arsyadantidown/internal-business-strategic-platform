@@ -28,3 +28,47 @@ export interface ProductStatusOption {
   label: string
   value: ProductStatus
 }
+
+export interface ProductApiEnvelope<T> {
+  success: boolean
+  message: string
+  data: T
+}
+
+export interface ProductListQuery {
+  product_status_id?: string
+}
+
+export interface ProductCreatePayload {
+  product_name: string
+  product_description: string
+  product_status_id: string
+}
+
+export interface ProductUpdatePayload {
+  product_name?: string
+  product_description?: string
+  product_status_id?: string
+}
+
+export interface ProductStatusRef {
+  id: string
+  code: string
+  name: string
+}
+
+export interface ProductRecord extends ProductItem {
+  productStatusId: string
+  productStatusName: string
+}
+
+export interface ProductMutationResult {
+  item: ProductRecord
+  message: string
+}
+
+export interface ProductDeleteResult {
+  id: string
+  deleted: boolean
+  message: string
+}

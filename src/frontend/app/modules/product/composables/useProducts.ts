@@ -1,17 +1,23 @@
-import { computed, ref, watch } from 'vue'
-import { dummyProducts } from '../data/product.data'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useProductStore } from '../stores/product.store'
 import type {
   ProductFilters,
   ProductFormValues,
-  ProductItem,
+  ProductRecord,
   ProductStatus
 } from '../types/product.types'
 
 export function useProducts() {
-  const items = ref<ProductItem[]>(dummyProducts.map(item => ({ ...item })))
+  const store = useProductStore()
+
+  const items = computed(() => store.products)
   const filters = ref<ProductFilters>({ search: '', status: '' })
   const currentPage = ref(1)
   const pageSize = ref(5)
+
+  const isLoading = computed(() => store.isLoading)
+  const isSubmitting = computed(() => store.isSubmitting)
+  const loadError = computed(() => store.error)
 
   const filteredItems = computed(() => {
     const keyword = filters.value.search.trim().toLowerCase()
@@ -54,34 +60,21 @@ export function useProducts() {
     currentPage.value = 1
   }
 
-  const createItem = (values: ProductFormValues) => {
-    items.value = [
-      {
-        id: `prd-${Date.now()}`,
-        productName: values.productName,
-        productDescription: values.productDescription,
-        productStatus: values.productStatus
-      },
-      ...items.value
-    ]
+  const createItem = async (values: ProductFormValues) => store.createProduct(values)
+
+  const updateItem = async (target: ProductRecord, values: ProductFormValues) => {
+    const current = items.value.find(item => item.id === target.id)
+    return store.updateProduct(target.id, values, current)
   }
 
-  const updateItem = (target: ProductItem, values: ProductFormValues) => {
-    items.value = items.value.map(item =>
-      item.id === target.id
-        ? {
-            ...item,
-            productName: values.productName,
-            productDescription: values.productDescription,
-            productStatus: values.productStatus
-          }
-        : item
-    )
-  }
+  const deleteItem = async (target: ProductRecord) => store.deleteProduct(target.id)
 
-  const deleteItem = (target: ProductItem) => {
-    items.value = items.value.filter(item => item.id !== target.id)
-  }
+  const retryLoad = () => store.fetchProducts()
+
+  onMounted(async () => {
+    await store.fetchStatuses().catch(() => undefined)
+    await store.fetchProducts().catch(() => undefined)
+  })
 
   const statusCount = (status: ProductStatus) =>
     items.value.filter(item => item.productStatus === status).length
@@ -113,6 +106,10 @@ export function useProducts() {
     setPageSize,
     createItem,
     updateItem,
-    deleteItem
+    deleteItem,
+    isLoading,
+    isSubmitting,
+    loadError,
+    retryLoad
   }
 }

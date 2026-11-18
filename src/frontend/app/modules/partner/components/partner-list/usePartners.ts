@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { getPartnerErrorMessage, partnerApi } from '../../api/partner.api'
+import { usePartnerStore } from '../../stores/partner.store'
 import type { PartnerFilters, PartnerListItem } from '../../types/partner.types'
 
 const SEARCH_DEBOUNCE_MS = 400
@@ -11,6 +11,8 @@ const createPartnerFilters = (): PartnerFilters => ({
 })
 
 export function usePartners() {
+  const store = usePartnerStore()
+
   const items = ref<PartnerListItem[]>([])
   const isLoading = ref(true)
   const loadError = ref('')
@@ -42,14 +44,14 @@ export function usePartners() {
     loadError.value = ''
 
     try {
-      const result = await partnerApi.list(filters.value)
+      const result = await store.fetchPartners(filters.value)
 
       if (token === fetchToken) {
         items.value = result
       }
     } catch (error) {
       if (token === fetchToken) {
-        loadError.value = getPartnerErrorMessage(error)
+        loadError.value = error instanceof Error ? error.message : 'Something went wrong. Please try again.'
         items.value = []
       }
     } finally {

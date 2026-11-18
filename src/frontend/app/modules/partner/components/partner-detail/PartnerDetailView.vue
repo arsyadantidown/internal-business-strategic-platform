@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { getPartnerErrorMessage, partnerApi } from '../../api/partner.api'
+import { usePartnerStore } from '../../stores/partner.store'
 import type { PartnerDetail } from '../../types/partner.types'
 import PartnerDetailCooperation from './PartnerDetailCooperation.vue'
 import PartnerDetailDocuments from './PartnerDetailDocuments.vue'
@@ -20,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const store = usePartnerStore()
 
 const detail = ref<PartnerDetail | null>(null)
 const isLoading = ref(true)
@@ -34,11 +35,11 @@ const fetchDetail = async () => {
   loadError.value = ''
 
   try {
-    const result = await partnerApi.getDetail(props.partnerId)
+    const result = await store.fetchPartnerDetail(props.partnerId)
     if (token === fetchToken) detail.value = result
   } catch (error) {
     if (token === fetchToken) {
-      loadError.value = getPartnerErrorMessage(error)
+      loadError.value = error instanceof Error ? error.message : 'Something went wrong. Please try again.'
       detail.value = null
     }
   } finally {
@@ -53,7 +54,7 @@ const toggleActive = async () => {
 
   try {
     const nextActive = !detail.value.isActive
-    await partnerApi.setActive(props.partnerId, nextActive)
+    await store.setPartnerActive(props.partnerId, nextActive)
 
     detail.value = { ...detail.value, isActive: nextActive }
 
@@ -65,7 +66,7 @@ const toggleActive = async () => {
   } catch (error) {
     toast.add({
       title: 'Failed to update partner status',
-      description: getPartnerErrorMessage(error),
+      description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
       color: 'error'
     })
   } finally {

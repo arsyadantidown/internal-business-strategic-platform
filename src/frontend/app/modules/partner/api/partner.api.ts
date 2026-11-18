@@ -308,6 +308,21 @@ export const partnerApi = {
     return { message: readText(response.data?.message) }
   },
 
+  async remove(partnerId: string): Promise<{ id: string, deleted: boolean, message: string }> {
+    const response = await apiClient.delete<ApiEnvelope<Record<string, unknown>>>(
+      `${ENDPOINTS.PARTNERS.BASE}/${partnerId}`
+    )
+    const raw = typeof response.data?.data === 'object' && response.data.data !== null
+      ? response.data.data as Record<string, unknown>
+      : {}
+
+    return {
+      id: readText(raw.id) || partnerId,
+      deleted: raw.deleted === true,
+      message: readText(response.data?.message)
+    }
+  },
+
   getUpdateChanges: buildUpdateChanges,
 
   applyStatusFilter(

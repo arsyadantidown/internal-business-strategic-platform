@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import CmsPagination from '~/modules/cms/components/cms-list/CmsPagination.vue'
 import ProductPageHeader from './ProductPageHeader.vue'
 import ProductStats from './ProductStats.vue'
@@ -8,7 +8,7 @@ import ProductToolbar from './ProductToolbar.vue'
 import ProductFormModal from '../product-form/ProductFormModal.vue'
 import ProductDeleteDialog from '../product-form/ProductDeleteDialog.vue'
 import { useProducts } from '../../composables/useProducts'
-import type { ProductFormValues, ProductItem } from '../../types/product.types'
+import type { ProductFormValues, ProductItem, ProductRecord } from '../../types/product.types'
 
 const toast = useToast()
 
@@ -26,12 +26,34 @@ const {
   setPageSize,
   createItem,
   updateItem,
-  deleteItem
+  deleteItem,
+  isLoading,
+  isSubmitting,
+  loadError,
+  retryLoad
 } = useProducts()
 
 const isFormOpen = ref(false)
-const editingItem = ref<ProductItem | null>(null)
-const deleteTarget = ref<ProductItem | null>(null)
+const editingItem = ref<ProductRecord | null>(null)
+const deleteTarget = ref<ProductRecord | null>(null)
+
+watch(isLoading, (loading, wasLoading) => {
+  if (loading || !wasLoading || !loadError.value) return
+
+  toast.add({
+    title: 'Failed to load products',
+    description: loadError.value,
+    color: 'error',
+    actions: [
+      {
+        label: 'Retry',
+        onClick: () => {
+          void retryLoad()
+        }
+      }
+    ]
+  })
+})
 
 const openCreateForm = () => {
   editingItem.value = null
@@ -39,7 +61,7 @@ const openCreateForm = () => {
 }
 
 const openEditForm = (item: ProductItem) => {
-  editingItem.value = item
+  editingItem.value = item as ProductRecord
   isFormOpen.value = true
 }
 
@@ -48,45 +70,74 @@ const closeForm = () => {
   editingItem.value = null
 }
 
-const handleFormSubmit = (values: ProductFormValues) => {
-  if (editingItem.value) {
-    updateItem(editingItem.value, values)
+const handleFormSubmit = async (values: ProductFormValues) => {
+  if (isSubmitting.value) return
+
+  try {
+    if (editingItem.value) {
+      await updateItem(editingItem.value, values)
+      toast.add({
+        title: 'Product updated',
+        description: `"${values.productName}" has been updated successfully.`,
+        color: 'success'
+      })
+    } else {
+      await createItem(values)
+      toast.add({
+        title: 'Product added',
+        description: `"${values.productName}" has been added to the product catalog.`,
+        color: 'success'
+      })
+    }
+
+    closeForm()
+  } catch (error) {
     toast.add({
-      title: 'Product updated',
-      description: `"${values.productName}" has been updated successfully.`,
-      color: 'success'
-    })
-  } else {
-    createItem(values)
-    toast.add({
-      title: 'Product added',
-      description: `"${values.productName}" has been added to the product catalog.`,
-      color: 'success'
+      title: 'Failed to save product',
+      description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+      color: 'error'
     })
   }
-
-  closeForm()
 }
 
 const openDeleteDialog = (item: ProductItem) => {
-  deleteTarget.value = item
+  deleteTarget.value = item as ProductRecord
 }
 
 const closeDeleteDialog = () => {
   deleteTarget.value = null
 }
 
-const handleDeleteConfirm = () => {
+const handleDeleteConfirm = async () => {
   const target = deleteTarget.value
-  if (!target) return
+  if (!target || isSubmitting.value) return
 
-  deleteItem(target)
-  toast.add({
-    title: 'Product deleted',
-    description: `"${target.productName}" has been removed from the product catalog.`,
-    color: 'success'
-  })
-  closeDeleteDialog()
+  try {
+    const result = await deleteItem(target)
+
+    if (!result.deleted) {
+      toast.add({
+        title: 'Product deactivated',
+        description: `"${target.productName}" is still used by projects and remains in the catalog.`,
+        color: 'warning'
+      })
+      closeDeleteDialog()
+      return
+    }
+
+    toast.add({
+      title: 'Product deleted',
+      description: `"${target.productName}" has been removed from the product catalog.`,
+      color: 'success'
+    })
+    closeDeleteDialog()
+  } catch (error) {
+    toast.add({
+      title: 'Failed to delete product',
+      description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+      color: 'error'
+    })
+  }
 }
 </script>
 

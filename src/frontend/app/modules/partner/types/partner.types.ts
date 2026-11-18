@@ -165,3 +165,29 @@ export interface PartnerFormValues {
 }
 
 export type PartnerFormErrors = Record<string, string | undefined>
+
+export interface PartnerApiEnvelope<T> {
+  success: boolean
+  message: string
+  data: T
+}
+
+export interface PartnerListQuery {
+  search?: string
+  include_inactive?: boolean
+}
+
+export interface PartnerCreatePayload {
+  partner_name: string
+}
+
+export interface PartnerUpdatePayload {
+  partner_name?: string
+  is_active?: boolean
+}
+
+export interface PartnerDeleteResult {
+  id: string
+  deleted: boolean
+  message: string
+}
