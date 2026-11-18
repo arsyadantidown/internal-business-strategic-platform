@@ -38,7 +38,8 @@ const {
   addPartner,
   removePartner,
   addSuccessMetric,
-  removeSuccessMetric
+  removeSuccessMetric,
+  revertSection
 } = useCmsPortfolioForm()
 
 // Media local states (untuk cover preview dan case study)
@@ -109,6 +110,19 @@ const allowEdit = reactive<Record<string, boolean>>({
   'products-tech-partners': false,
   'media-documents': false
 })
+
+// Deteksi jika user meng-uncheck section: otomatis revert isian section tersebut ke data asli!
+watch(
+  () => ({ ...allowEdit }),
+  (newVal, oldVal) => {
+    Object.keys(newVal).forEach((key) => {
+      // Jika sebelumnya true, lalu berubah jadi false (di-uncheck oleh user):
+      if (oldVal && oldVal[key] === true && newVal[key] === false) {
+        revertSection(key)
+      }
+    })
+  }
+)
 
 // Fungsi helper untuk mereset semua checkbox allowEdit kembali ke false
 const resetAllowEdit = () => {

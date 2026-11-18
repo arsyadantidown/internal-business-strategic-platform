@@ -48,6 +48,9 @@ export function useCmsPortfolioForm() {
     existing_files: [] as any[]
   })
 
+  // Snapshot data awal untuk fitur Auto-Revert / Rollback
+  let originalRawDetail: any = null
+
   // 2. Computed Estimated Profit
   const estimatedProfit = computed(() => {
     const revenue = Number(form.value_before_tax) || 0
@@ -59,6 +62,7 @@ export function useCmsPortfolioForm() {
   // 3. Mapping data dari Store Detail ke dalam Form
   const populateFormFromStore = (data: any) => {
     if (!data) return
+    originalRawDetail = JSON.parse(JSON.stringify(data)) // Simpan clone data asli
 
     form.project_name = data.project_name || ''
     form.project_code = data.project_code || ''
@@ -137,7 +141,114 @@ export function useCmsPortfolioForm() {
     }
   }
 
-  // 4. Siapkan Task Payload Hanya untuk Section yang Di-enable
+  // 4. Fungsi Revert / Rollback jika section di-uncheck
+  const revertSection = (sectionKey: string) => {
+    if (!originalRawDetail) return
+
+    if (sectionKey === 'project-information') {
+      form.project_name = originalRawDetail.project_name || ''
+      form.project_code = originalRawDetail.project_code || ''
+      form.opportunity = originalRawDetail.opportunity || ''
+      form.year = originalRawDetail.year ? String(originalRawDetail.year) : ''
+      form.business_unit_id =
+        originalRawDetail.business_unit?.id || originalRawDetail.business_unit_id || ''
+      form.project_status_id =
+        originalRawDetail.project_status?.id || originalRawDetail.project_status_id || ''
+      form.is_featured = Boolean(originalRawDetail.is_featured)
+    }
+
+    if (sectionKey === 'customer-information') {
+      const cust = originalRawDetail.customer || {}
+      form.customer.customer_name = cust.customer_name || ''
+      form.customer.customer_location = cust.customer_location || ''
+      form.customer.annual_revenue = cust.annual_revenue || ''
+      form.customer.industry_id = cust.industry?.id || cust.industry_id || ''
+      form.customer.company_size_id = cust.company_size?.id || cust.company_size_id || ''
+      form.customer.customer_type_id = cust.customer_type?.id || cust.customer_type_id || ''
+      form.customer.legal_structure_id = cust.legal_structure?.id || cust.legal_structure_id || ''
+    }
+
+    if (sectionKey === 'contract-governance') {
+      form.contract_name = originalRawDetail.contract_name || ''
+      form.contract_number = originalRawDetail.contract_number || ''
+      form.project_manager = originalRawDetail.project_manager || ''
+      form.account_manager = originalRawDetail.account_manager || ''
+      form.start_date = originalRawDetail.start_date
+        ? originalRawDetail.start_date.substring(0, 10)
+        : ''
+      form.end_date = originalRawDetail.end_date ? originalRawDetail.end_date.substring(0, 10) : ''
+    }
+
+    if (sectionKey === 'financial-information') {
+      const fin = originalRawDetail.financial || {}
+      form.value_before_tax = Number(
+        originalRawDetail.value_before_tax ?? fin.value_before_tax ?? 0
+      )
+      form.carry_over_value = Number(
+        originalRawDetail.carry_over_value ?? fin.carry_over_value ?? 0
+      )
+      form.financial.cogs = Number(fin.cogs ?? 0)
+      form.financial.operational_cost = Number(fin.operational_cost ?? 0)
+    }
+
+    if (sectionKey === 'project-content') {
+      form.project_objective = originalRawDetail.project_objective || ''
+      form.project_description = originalRawDetail.project_description || ''
+      form.project_background = originalRawDetail.project_background || ''
+      form.project_challenges = originalRawDetail.project_challenges || ''
+      form.project_solution = originalRawDetail.project_solution || ''
+
+      if (
+        Array.isArray(originalRawDetail.success_metrics) &&
+        originalRawDetail.success_metrics.length > 0
+      ) {
+        form.success_metrics = originalRawDetail.success_metrics.map((sm: any) => ({
+          success_metric_value: sm.success_metric_value || sm.value || '',
+          success_metric_label: sm.success_metric_label || sm.label || '',
+          sort_order: sm.sort_order ?? 0
+        }))
+      } else {
+        form.success_metrics = [
+          { success_metric_value: '', success_metric_label: '', sort_order: 0 }
+        ]
+      }
+    }
+
+    if (sectionKey === 'products-tech-partners') {
+      form.product_ids = Array.isArray(originalRawDetail.products)
+        ? originalRawDetail.products.map((p: any) => (typeof p === 'object' ? p.id : p))
+        : []
+
+      const extractedTechIds: string[] = []
+      if (Array.isArray(originalRawDetail.tech_stacks)) {
+        extractedTechIds.push(
+          ...originalRawDetail.tech_stacks.map((t: any) => (typeof t === 'object' ? t.id : t))
+        )
+      } else if (
+        originalRawDetail.tech_stacks &&
+        typeof originalRawDetail.tech_stacks === 'object'
+      ) {
+        const { frontend, backend, data_storage } = originalRawDetail.tech_stacks
+        if (Array.isArray(frontend)) extractedTechIds.push(...frontend.map((t: any) => t.id || t))
+        if (Array.isArray(backend)) extractedTechIds.push(...backend.map((t: any) => t.id || t))
+        if (Array.isArray(data_storage))
+          extractedTechIds.push(...data_storage.map((t: any) => t.id || t))
+      }
+      form.tech_stack_ids = extractedTechIds
+
+      if (Array.isArray(originalRawDetail.partners) && originalRawDetail.partners.length > 0) {
+        form.partners = originalRawDetail.partners.map((pt: any) => ({
+          partner_id: pt.partner_id || pt.partner?.id || '',
+          partner_role: pt.partner_role || 'principal',
+          partner_contribution: pt.partner_contribution || ''
+        }))
+      } else {
+        form.partners = [{ partner_id: '', partner_role: 'principal', partner_contribution: '' }]
+      }
+    }
+  }
+
+  // 5. Siapkan Task Payload Hanya untuk Section yang Di-enable
   const preparePayloads = (allowEdit: Record<string, boolean>) => {
     const tasks: any = {}
 
@@ -223,7 +334,7 @@ export function useCmsPortfolioForm() {
     return tasks
   }
 
-  // 5. Dynamic Array Handlers
+  // 6. Dynamic Array Handlers
   const addPartner = () => {
     form.partners.push({ partner_id: '', partner_role: 'principal', partner_contribution: '' })
   }
@@ -245,6 +356,7 @@ export function useCmsPortfolioForm() {
     form,
     estimatedProfit,
     populateFormFromStore,
+    revertSection,
     preparePayloads,
     addPartner,
     removePartner,
