@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import CmsFormField from '~/modules/cms/components/cms-form/CmsFormField.vue'
-import { cmsControlClass, cmsControlStateClass } from '~/modules/cms/utils/cmsForm'
 import type {
   TechStackCategory,
   TechStackFormErrors,
@@ -34,6 +33,15 @@ const form = reactive<{
 })
 
 const errors = ref<TechStackFormErrors>({})
+
+// Input styling dengan tinggi proporsional (h-10 / 40px) dan rounded-lg (8px)
+const controlBaseClass =
+  'h-10 w-full rounded-lg border bg-white px-3.5 text-xs text-slate-800 placeholder-slate-400 shadow-2xs transition-colors focus:outline-none focus:ring-2'
+
+const controlStateClass = (hasError: boolean) =>
+  hasError
+    ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-200'
+    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20'
 
 const validate = (): TechStackFormValues | null => {
   const next: TechStackFormErrors = {}
@@ -141,7 +149,7 @@ watch(
             v-model="form.name"
             type="text"
             placeholder="e.g. Vue.js, Python, PostgreSQL"
-            :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.name))]"
+            :class="[controlBaseClass, controlStateClass(Boolean(errors.name))]"
           >
         </CmsFormField>
 
@@ -156,7 +164,7 @@ watch(
             <select
               id="tech-stack-category"
               v-model="form.category"
-              :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.category)), 'appearance-none pr-8 cursor-pointer']"
+              :class="[controlBaseClass, controlStateClass(Boolean(errors.category)), 'appearance-none pr-9 cursor-pointer']"
             >
               <option value="frontend">
                 Frontend
@@ -170,22 +178,22 @@ watch(
             </select>
             <UIcon
               name="i-lucide-chevron-right"
-              class="pointer-events-none absolute top-1/2 right-2.5 h-3.5 w-3.5 -translate-y-1/2 rotate-90 text-slate-400"
+              class="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-slate-400"
             />
           </div>
         </CmsFormField>
 
         <!-- Status Toggle (Only on edit) -->
-        <div v-if="isEditMode" class="pt-2">
-          <label class="flex items-center gap-2 cursor-pointer">
+        <div v-if="isEditMode" class="pt-1">
+          <label class="inline-flex items-center gap-2.5 cursor-pointer">
             <input
               v-model="form.isActive"
               type="checkbox"
-              class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              class="h-4 w-4 rounded-sm border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
             >
             <span class="text-xs font-semibold text-slate-700">Active status</span>
           </label>
-          <p class="mt-0.5 text-[11px] text-slate-400">
+          <p class="mt-1 text-[11px] text-slate-400">
             Inactive tech stacks will be hidden from project selection.
           </p>
         </div>
@@ -194,7 +202,7 @@ watch(
         <div class="flex items-center justify-end gap-2.5 border-t border-slate-100 pt-4">
           <button
             type="button"
-            class="inline-flex h-8.5 items-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:bg-slate-50 hover:text-slate-800 cursor-pointer"
+            class="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:bg-slate-50 hover:text-slate-800 cursor-pointer"
             @click="closeModal"
           >
             Cancel
@@ -202,7 +210,7 @@ watch(
 
           <button
             type="submit"
-            class="inline-flex h-8.5 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-blue-700 active:scale-95 cursor-pointer"
+            class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-blue-700 active:scale-95 cursor-pointer"
           >
             <UIcon
               :name="isEditMode ? 'i-lucide-check' : 'i-lucide-plus'"
