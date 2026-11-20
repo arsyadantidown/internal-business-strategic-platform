@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { masterDataApi } from '../api/master-data.api'
 import type { MasterDataItem, MasterDataType, PortfolioOption } from '../types/types'
 import { projectApi } from '~/modules/cms/api/project.api'
+
 export const useMasterDataStore = defineStore('masterData', () => {
   // State raw master data
   const products = ref<any[]>([])

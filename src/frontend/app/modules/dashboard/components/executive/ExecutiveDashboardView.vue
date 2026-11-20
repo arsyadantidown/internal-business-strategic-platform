@@ -29,6 +29,8 @@ const handleFilterChange = (filters: any) => {
     legal_structure_id: filters.legalStructure || undefined,
     business_unit_id: filters.businessUnit || undefined,
     customer_type_id: filters.customerType || undefined,
+    tech_stack_id:
+      filters.frontendStack || filters.backendStack || filters.database || undefined,
     frontend_tech_stack_id: filters.frontendStack || undefined,
     backend_tech_stack_id: filters.backendStack || undefined,
     database_tech_stack_id: filters.database || undefined

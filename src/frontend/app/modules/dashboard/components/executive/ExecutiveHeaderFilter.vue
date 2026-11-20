@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useCustomerStore } from '~/modules/customer/stores/customer.store'
+import { useMasterDataStore } from '~/modules/portofolio/stores/master-data.store'
 
-// Customer Store
+// Customer Store & Master Data Store dari modul portofolio
 const customerStore = useCustomerStore()
+const masterDataStore = useMasterDataStore()
 
 onMounted(() => {
   customerStore.fetchCustomerNames()
   customerStore.fetchCustomerLocations()
+  masterDataStore.fetchAllMasterData()
 })
 
 // State toggle untuk membuka/menutup More Filters
@@ -148,8 +151,13 @@ const selectClass =
       <div class="relative">
         <select v-model="filters.industry" :class="selectClass">
           <option value="">All Industries</option>
-          <option value="financial">Financial Services</option>
-          <option value="it">Information Technology</option>
+          <option
+            v-for="opt in masterDataStore.industryOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </option>
         </select>
         <UIcon
           name="i-lucide-chevron-down"
@@ -161,10 +169,13 @@ const selectClass =
       <div class="relative">
         <select v-model="filters.status" :class="selectClass">
           <option value="">All Project Statuses</option>
-          <option value="on-going">On Going</option>
-          <option value="closed">Closed</option>
-          <option value="proposal">On Proposal</option>
-          <option value="canceled">Canceled</option>
+          <option
+            v-for="opt in masterDataStore.projectStatusOptions"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </option>
         </select>
         <UIcon
           name="i-lucide-chevron-down"
@@ -211,6 +222,13 @@ const selectClass =
         <div class="relative">
           <select v-model="filters.companySize" :class="selectClass">
             <option value="">All Company Sizes</option>
+            <option
+              v-for="opt in masterDataStore.companySizeOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
           </select>
           <UIcon
             name="i-lucide-chevron-down"
@@ -255,6 +273,13 @@ const selectClass =
         <div class="relative">
           <select v-model="filters.legalStructure" :class="selectClass">
             <option value="">All Legal Structures</option>
+            <option
+              v-for="opt in masterDataStore.legalStructureOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
           </select>
           <UIcon
             name="i-lucide-chevron-down"
@@ -268,6 +293,13 @@ const selectClass =
         <div class="relative">
           <select v-model="filters.businessUnit" :class="selectClass">
             <option value="">All Business Units</option>
+            <option
+              v-for="opt in masterDataStore.businessUnitOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
           </select>
           <UIcon
             name="i-lucide-chevron-down"
@@ -278,6 +310,13 @@ const selectClass =
         <div class="relative">
           <select v-model="filters.customerType" :class="selectClass">
             <option value="">All Customer Types</option>
+            <option
+              v-for="opt in masterDataStore.customerTypeOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
           </select>
           <UIcon
             name="i-lucide-chevron-down"
@@ -288,6 +327,13 @@ const selectClass =
         <div class="relative">
           <select v-model="filters.frontendStack" :class="selectClass">
             <option value="">All Frontend Stacks</option>
+            <option
+              v-for="opt in masterDataStore.frontendStackOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
           </select>
           <UIcon
             name="i-lucide-chevron-down"
@@ -298,6 +344,13 @@ const selectClass =
         <div class="relative">
           <select v-model="filters.backendStack" :class="selectClass">
             <option value="">All Backend Stacks</option>
+            <option
+              v-for="opt in masterDataStore.backendStackOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
           </select>
           <UIcon
             name="i-lucide-chevron-down"
@@ -311,6 +364,13 @@ const selectClass =
         <div class="relative">
           <select v-model="filters.database" :class="selectClass">
             <option value="">All Databases</option>
+            <option
+              v-for="opt in masterDataStore.databaseOptions"
+              :key="opt.value"
+              :value="opt.value"
+            >
+              {{ opt.label }}
+            </option>
           </select>
           <UIcon
             name="i-lucide-chevron-down"
