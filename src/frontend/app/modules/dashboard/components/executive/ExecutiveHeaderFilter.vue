@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
+import { useCustomerStore } from '~/modules/customer/stores/customer.store'
+
+// Customer Store
+const customerStore = useCustomerStore()
+
+onMounted(() => {
+  customerStore.fetchCustomerNames()
+  customerStore.fetchCustomerLocations()
+})
 
 // State toggle untuk membuka/menutup More Filters
 const isMoreFiltersOpen = ref(false)
@@ -12,7 +21,8 @@ const filters = reactive({
   status: '',
   year: '',
   companySize: '',
-  product: '',
+  customerName: '',
+  customerLocation: '',
   legalStructure: '',
   businessUnit: '',
   customerType: '',
@@ -26,6 +36,15 @@ const emit = defineEmits<{
   (e: 'reset'): void
 }>()
 
+// Watch perubahan filter dan kirim update ke parent view
+watch(
+  filters,
+  () => {
+    emit('update:filters', filters)
+  },
+  { deep: true }
+)
+
 const handleReset = () => {
   filters.search = ''
   filters.isFeatured = null
@@ -33,7 +52,8 @@ const handleReset = () => {
   filters.status = ''
   filters.year = ''
   filters.companySize = ''
-  filters.product = ''
+  filters.customerName = ''
+  filters.customerLocation = ''
   filters.legalStructure = ''
   filters.businessUnit = ''
   filters.customerType = ''
@@ -186,7 +206,7 @@ const selectClass =
       v-show="isMoreFiltersOpen"
       class="rounded-[12px] border border-[#E2E8F0] bg-[#F1F5F9]/80 p-[14px] shadow-[inset_0_2px_4px_1px_rgba(0,0,0,0.05)] space-y-2.5 transition-all"
     >
-      <!-- Sub-row 1: Company Sizes, Products, Legal Structures, Business Units -->
+      <!-- Sub-row 1: Company Sizes, Customer Names, Customer Locations, Legal Structures -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         <div class="relative">
           <select v-model="filters.companySize" :class="selectClass">
@@ -199,8 +219,32 @@ const selectClass =
         </div>
 
         <div class="relative">
-          <select v-model="filters.product" :class="selectClass">
-            <option value="">All Products</option>
+          <select v-model="filters.customerName" :class="selectClass">
+            <option value="">All Customer Names</option>
+            <option
+              v-for="name in customerStore.customerNames"
+              :key="name"
+              :value="name"
+            >
+              {{ name }}
+            </option>
+          </select>
+          <UIcon
+            name="i-lucide-chevron-down"
+            class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
+          />
+        </div>
+
+        <div class="relative">
+          <select v-model="filters.customerLocation" :class="selectClass">
+            <option value="">All Customer Locations</option>
+            <option
+              v-for="loc in customerStore.customerLocations"
+              :key="loc"
+              :value="loc"
+            >
+              {{ loc }}
+            </option>
           </select>
           <UIcon
             name="i-lucide-chevron-down"
@@ -217,7 +261,10 @@ const selectClass =
             class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
           />
         </div>
+      </div>
 
+      <!-- Sub-row 2: Business Units, Customer Types, Frontend Stacks, Backend Stacks -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         <div class="relative">
           <select v-model="filters.businessUnit" :class="selectClass">
             <option value="">All Business Units</option>
@@ -227,10 +274,7 @@ const selectClass =
             class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
           />
         </div>
-      </div>
 
-      <!-- Sub-row 2: Customer Types, Frontend Stacks, Backend Stacks, Databases -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         <div class="relative">
           <select v-model="filters.customerType" :class="selectClass">
             <option value="">All Customer Types</option>
@@ -260,7 +304,10 @@ const selectClass =
             class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
           />
         </div>
+      </div>
 
+      <!-- Sub-row 3: Databases -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
         <div class="relative">
           <select v-model="filters.database" :class="selectClass">
             <option value="">All Databases</option>

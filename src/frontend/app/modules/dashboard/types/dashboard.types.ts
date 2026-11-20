@@ -28,10 +28,12 @@ export interface DashboardFilterParams {
   project_status_id?: string
   year?: number | string
   company_size_id?: string
-  product_id?: string
+  customer_name?: string
+  customer_location?: string
   legal_structure_id?: string
   business_unit_id?: string
   customer_type_id?: string
+  tech_stack_id?: string
   frontend_tech_stack_id?: string
   backend_tech_stack_id?: string
   database_tech_stack_id?: string
