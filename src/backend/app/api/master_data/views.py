@@ -14,6 +14,24 @@ from app.models.user_model import User
 router = APIRouter(prefix="/master-data", tags=["Master Data"])
 
 CREATE_EXAMPLE = {
+    "company-sizes": {
+        "summary": "Contoh untuk type company-sizes",
+        "value": {
+            "company_size_code": "TIER_7",
+            "company_size_name": "Tier 7 : Micro (<100M)",
+            "company_size_description": "Asset/annual budget/annual sales di bawah 100 million",
+            "sort_order": 7,
+        },
+    },
+    "customer-types": {
+        "summary": "Contoh untuk type customer-types",
+        "value": {
+            "customer_type_code": "PROSPECT_CUSTOMER",
+            "customer_type_name": "Prospect Customer",
+            "customer_type_description": None,
+            "sort_order": 3,
+        },
+    },
     "industries": {
         "summary": "Contoh untuk type industries",
         "value": {
@@ -22,14 +40,74 @@ CREATE_EXAMPLE = {
             "industry_description": None,
             "sort_order": None,
         },
-    }
+    },
+    "legal-structures": {
+        "summary": "Contoh untuk type legal-structures",
+        "value": {
+            "legal_structure_code": "FOREIGN_COMPANY",
+            "legal_structure_name": "Foreign Company",
+            "legal_structure_description": "Perusahaan asing (PMA)",
+            "sort_order": 5,
+        },
+    },
+    "business-units": {
+        "summary": "Contoh untuk type business-units",
+        "value": {
+            "business_unit_code": "DA",
+            "business_unit_name": "DA",
+            "business_unit_description": "Data Analytics",
+            "sort_order": 4,
+        },
+    },
+    "project-statuses": {
+        "summary": "Contoh untuk type project-statuses",
+        "value": {
+            "project_status_code": "ON_HOLD",
+            "project_status_name": "On Hold",
+            "project_status_description": "Project is paused",
+            "sort_order": 5,
+        },
+    },
+    "product-statuses": {
+        "summary": "Contoh untuk type product-statuses",
+        "value": {
+            "product_status_code": "BETA",
+            "product_status_name": "Beta",
+            "product_status_description": None,
+            "sort_order": 5,
+        },
+    },
 }
 
 UPDATE_EXAMPLE = {
+    "company-sizes": {
+        "summary": "Contoh untuk type company-sizes",
+        "value": {"company_size_name": "Tier 7 : Micro (<100M)", "is_active": False},
+    },
+    "customer-types": {
+        "summary": "Contoh untuk type customer-types",
+        "value": {"customer_type_name": "Prospect Customer", "sort_order": 2},
+    },
     "industries": {
         "summary": "Contoh untuk type industries",
         "value": {"industry_name": "Agritech", "is_active": False},
-    }
+    },
+    "legal-structures": {
+        "summary": "Contoh untuk type legal-structures",
+        "value": {"legal_structure_description": "Perusahaan Modal Asing"},
+    },
+    "business-units": {
+        "summary": "Contoh untuk type business-units",
+        "value": {"business_unit_name": "DA", "business_unit_description": "Data & Analytics"},
+    },
+    "project-statuses": {
+        "summary": "Contoh untuk type project-statuses",
+        "value": {"project_status_name": "On Hold", "is_active": True},
+    },
+    "product-statuses": {
+        "summary": "Contoh untuk type product-statuses",
+        "value": {"product_status_name": "Beta", "sort_order": 3},
+    },
 }
 
 def get_master_data_use_case(
