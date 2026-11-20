@@ -2,7 +2,6 @@
 import { computed, reactive, ref, watch } from 'vue'
 import CmsFormSection from '~/modules/cms/components/cms-form/CmsFormSection.vue'
 import CmsFormField from '~/modules/cms/components/cms-form/CmsFormField.vue'
-import { cmsControlClass, cmsControlStateClass } from '~/modules/cms/utils/cmsForm'
 import type {
   MasterDataCategory,
   MasterDataFormErrors,
@@ -28,29 +27,78 @@ interface MasterDataFormState {
   code: string
   name: string
   description: string
-  sortOrder: string
-  isActive: boolean
 }
 
 const isEditMode = computed(() => props.editingItem !== null)
+const isCompanySize = computed(() => props.category.type === 'company-sizes')
 
 const form = reactive<MasterDataFormState>({
   code: '',
   name: '',
-  description: '',
-  sortOrder: '',
-  isActive: true
+  description: ''
 })
 
 const errors = ref<MasterDataFormErrors>({})
 
+// Styling input/control dengan tinggi proporsional (h-10 / 40px), padding px-3.5, dan rounded-lg (8px)
+const controlBaseClass =
+  'h-10 w-full rounded-lg border bg-white px-3.5 text-xs text-slate-800 placeholder-slate-400 shadow-2xs transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400'
+
+const textareaBaseClass =
+  'w-full rounded-lg border bg-white p-3 text-xs text-slate-800 placeholder-slate-400 shadow-2xs transition-colors focus:outline-none focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400'
+
+const controlStateClass = (hasError: boolean) =>
+  hasError
+    ? 'border-rose-300 focus:border-rose-400 focus:ring-rose-200'
+    : 'border-slate-200 focus:border-blue-500 focus:ring-blue-500/20'
+
+/**
+ * Logika auto-generate code dari name saat create:
+ * 1. Jika category adalah Company Size:
+ *    Cek apakah mengandung pola Tier dan angka (misal "Tier 7 : bla bla bla" atau "Tier 7") -> "TIER_7"
+ *    Jika tidak cocok pola tier, fallback ke slug CAPITAL_UNDERSCORE.
+ * 2. Kategori lainnya:
+ *    Mengubah spasi/simbol menjadi capital underscore (misal "nama saya" -> "NAMA_SAYA").
+ */
+const generateCodeFromName = (nameStr: string): string => {
+  const trimmed = nameStr.trim()
+  if (!trimmed) return ''
+
+  if (isCompanySize.value) {
+    const tierMatch = trimmed.match(/tier\s*(\d+)/i)
+    if (tierMatch && tierMatch[1]) {
+      return `TIER_${tierMatch[1]}`
+    }
+  }
+
+  // Standar: ubah non-alfanumerik menjadi underscore, bersihkan ganda underscore, uppercase
+  return trimmed
+    .replace(/[^a-zA-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toUpperCase()
+    .slice(0, 50)
+}
+
+// Watch perubahan form.name untuk mengupdate form.code otomatis baik saat mode ADD maupun EDIT
+watch(
+  () => form.name,
+  (newName) => {
+    form.code = generateCodeFromName(newName)
+  }
+)
+
 const validate = (): MasterDataFormValues | null => {
   const next: MasterDataFormErrors = {}
   const name = form.name.trim()
+  const code = form.code.trim()
+
+  if (!name) {
+    next.name = 'Name is required.'
+  } else if (name.length > 150) {
+    next.name = 'Name must be at most 150 characters.'
+  }
 
   if (!isEditMode.value) {
-    const code = form.code.trim()
-
     if (!code) {
       next.code = 'Code is required.'
     } else if (code.length > 50) {
@@ -60,36 +108,30 @@ const validate = (): MasterDataFormValues | null => {
     }
   }
 
-  if (!name) {
-    next.name = 'Name is required.'
-  } else if (name.length > 150) {
-    next.name = 'Name must be at most 150 characters.'
-  }
-
-  if (form.sortOrder !== '') {
-    const parsed = Number(form.sortOrder)
-
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 32767) {
-      next.sortOrder = 'Sort order must be a whole number between 1 and 32767.'
-    }
-  }
-
   errors.value = next
 
   if (Object.keys(next).length > 0) return null
 
-  return {
-    code: isEditMode.value ? '' : form.code.trim(),
+  const payload: MasterDataFormValues = {
+    code: isEditMode.value ? (props.editingItem?.code ?? '') : code,
     name,
-    description: form.description.trim() || '',
-    sortOrder: form.sortOrder === '' ? null : Number(form.sortOrder),
-    isActive: isEditMode.value ? form.isActive : true
+    sortOrder: props.editingItem?.sortOrder ?? null,
+    isActive: props.editingItem?.isActive ?? true
   }
+
+  // Kirim description jika Company Size
+  if (isCompanySize.value) {
+    payload.description = form.description.trim()
+  } else if (props.editingItem?.description) {
+    payload.description = props.editingItem.description
+  }
+
+  return payload
 }
 
 const handleSubmit = () => {
+  if (props.isSaving) return
   const values = validate()
-
   if (values) emit('submit', values)
 }
 
@@ -103,22 +145,19 @@ watch(
   (isOpen) => {
     if (!isOpen) return
 
-    errors.value = {}
-
     if (props.editingItem) {
       form.code = props.editingItem.code
       form.name = props.editingItem.name
       form.description = props.editingItem.description ?? ''
-      form.sortOrder = props.editingItem.sortOrder === null ? '' : String(props.editingItem.sortOrder)
-      form.isActive = props.editingItem.isActive
     } else {
       form.code = ''
       form.name = ''
       form.description = ''
-      form.sortOrder = ''
-      form.isActive = true
     }
-  }
+
+    errors.value = {}
+  },
+  { immediate: true }
 )
 </script>
 
@@ -128,28 +167,40 @@ watch(
     class="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/45 p-4 backdrop-blur-sm"
     @click.self="closeModal"
   >
-    <div class="w-full max-w-xl rounded-2xl border border-slate-200/80 bg-white shadow-2xl">
-      <header class="flex items-start justify-between gap-3 border-b border-slate-100 p-5">
-        <div class="flex items-start gap-2.5">
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+    <div
+      class="w-full max-w-lg rounded-2xl border border-slate-200/80 bg-white shadow-2xl transition-all"
+      role="dialog"
+      aria-modal="true"
+      :aria-labelledby="'modal-title-' + category.type"
+    >
+      <header class="flex items-center justify-between border-b border-slate-100 p-5">
+        <div class="flex items-center gap-3">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
             <UIcon
               :name="category.icon"
-              class="h-4 w-4"
+              class="h-5 w-5"
             />
           </div>
           <div>
-            <h2 class="text-sm font-bold tracking-tight text-slate-900">
-              {{ isEditMode ? 'Edit' : 'Add' }} {{ category.singular }}
+            <h2
+              :id="'modal-title-' + category.type"
+              class="text-sm font-bold tracking-tight text-slate-900 sm:text-base"
+            >
+              {{ isEditMode ? `Edit ${category.singular}` : `Add New ${category.singular}` }}
             </h2>
-            <p class="mt-0.5 text-[11px] text-slate-500">
-              {{ isEditMode ? 'Update the details of this entry.' : `Create a new ${category.singular.toLowerCase()} entry.` }}
+            <p class="mt-0.5 text-xs text-slate-500">
+              {{
+                isEditMode
+                  ? `Update information for this ${category.singular.toLowerCase()}.`
+                  : `Create a new entry in ${category.label}.`
+              }}
             </p>
           </div>
         </div>
 
         <button
           type="button"
-          class="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
+          class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 cursor-pointer"
           title="Close"
           @click="closeModal"
         >
@@ -164,37 +215,18 @@ watch(
         novalidate
         @submit.prevent="handleSubmit"
       >
-        <div class="max-h-[60vh] overflow-y-auto p-5">
+        <div class="p-5">
           <CmsFormSection
             :title="`${category.singular} Details`"
-            :description="`Fields marked with * are required. Codes are permanent once created.`"
+            :description="isEditMode ? 'Update the details of this master data entry.' : 'Fields marked with * are required. Codes are auto-generated from name.'"
             :icon="category.icon"
           >
-            <CmsFormField
-              label="Code"
-              html-for="master-data-code"
-              :required="!isEditMode"
-              :error="errors.code"
-              hint="Uppercase letters, numbers, and underscores. Cannot be changed later."
-            >
-              <input
-                id="master-data-code"
-                v-model="form.code"
-                type="text"
-                placeholder="e.g. MICRO_SMALL"
-                autocomplete="off"
-                spellcheck="false"
-                class="font-mono uppercase"
-                :class="[cmsControlClass, cmsControlStateClass(!!errors.code)]"
-                :disabled="isEditMode || isSaving"
-                @input="form.code = form.code.toUpperCase()"
-              >
-            </CmsFormField>
-
+            <!-- 1. Name Field (Atas, Lebar Penuh) -->
             <CmsFormField
               label="Name"
               html-for="master-data-name"
               required
+              full
               :error="errors.name"
               :hint="`Displayed name of the ${category.singular.toLowerCase()}.`"
             >
@@ -202,72 +234,51 @@ watch(
                 id="master-data-name"
                 v-model="form.name"
                 type="text"
-                placeholder="e.g. Micro & Small"
+                :placeholder="isCompanySize ? 'e.g. Tier 1 : Enterprise' : 'e.g. Micro & Small'"
                 autocomplete="off"
-                :class="[cmsControlClass, cmsControlStateClass(!!errors.name)]"
+                :class="[controlBaseClass, controlStateClass(!!errors.name)]"
                 :disabled="isSaving"
               >
             </CmsFormField>
 
+            <!-- 2. Code Field (Bawah, Disabled, Auto Capital Underscore) -->
             <CmsFormField
-              label="Sort Order"
-              html-for="master-data-sort-order"
-              :error="errors.sortOrder"
-              hint="Optional. Lower numbers appear first (1-32767)."
+              label="Code"
+              html-for="master-data-code"
+              :required="!isEditMode"
+              full
+              :error="errors.code"
+              hint="Auto-generated capital underscore code. Permanent once created."
             >
               <input
-                id="master-data-sort-order"
-                v-model="form.sortOrder"
-                type="number"
-                min="1"
-                max="32767"
-                step="1"
-                placeholder="e.g. 10"
-                :class="[cmsControlClass, cmsControlStateClass(!!errors.sortOrder)]"
-                :disabled="isSaving"
+                id="master-data-code"
+                v-model="form.code"
+                type="text"
+                placeholder="Auto-generated code..."
+                autocomplete="off"
+                spellcheck="false"
+                class="font-mono uppercase bg-slate-50/80 cursor-not-allowed"
+                :class="[controlBaseClass, controlStateClass(!!errors.code)]"
+                disabled
               >
             </CmsFormField>
 
+            <!-- 3. Description Field (Khusus Company Size) -->
             <CmsFormField
-              label="Status"
-              html-for="master-data-active"
-              hint="Inactive entries are hidden from selection forms."
-            >
-              <label
-                class="flex h-9 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium text-slate-700 transition-colors"
-                :class="form.isActive
-                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                  : 'border-slate-200 bg-white text-slate-600'"
-              >
-                <span
-                  class="h-2 w-2 rounded-full"
-                  :class="form.isActive ? 'bg-emerald-500' : 'bg-slate-400'"
-                />
-                <input
-                  id="master-data-active"
-                  v-model="form.isActive"
-                  type="checkbox"
-                  class="sr-only"
-                  :disabled="isSaving"
-                >
-                <span>{{ form.isActive ? 'Active' : 'Inactive' }}</span>
-              </label>
-            </CmsFormField>
-
-            <CmsFormField
+              v-if="isCompanySize"
               label="Description"
               html-for="master-data-description"
               :error="errors.description"
               full
-              hint="Optional context shown to administrators."
+              hint="Optional context or criteria for this company size tier."
             >
               <textarea
                 id="master-data-description"
                 v-model="form.description"
                 rows="3"
-                placeholder="Describe what this entry represents..."
+                placeholder="Describe the revenue range or employee count for this tier..."
                 class="resize-none"
-                :class="[cmsControlClass, cmsControlStateClass(!!errors.description)]"
+                :class="[textareaBaseClass, controlStateClass(!!errors.description)]"
                 :disabled="isSaving"
               />
             </CmsFormField>
@@ -277,7 +288,7 @@ watch(
         <footer class="flex items-center justify-end gap-2.5 border-t border-slate-100 p-5">
           <button
             type="button"
-            class="inline-flex h-8.5 items-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:bg-slate-50 hover:text-slate-800 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            class="inline-flex h-9 items-center rounded-lg border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:bg-slate-50 hover:text-slate-800 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="isSaving"
             @click="closeModal"
           >
@@ -286,7 +297,7 @@ watch(
 
           <button
             type="submit"
-            class="inline-flex h-8.5 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-blue-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            class="inline-flex h-9 items-center gap-1.5 rounded-lg bg-blue-600 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-blue-700 active:scale-95 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
             :disabled="isSaving"
           >
             <UIcon

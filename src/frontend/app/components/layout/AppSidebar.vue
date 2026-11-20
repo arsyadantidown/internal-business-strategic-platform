@@ -95,7 +95,7 @@ const navigationSections: NavigationSection[] = [
           { label: 'Partnership Workflow', to: '/admin/content/workflow' },
           { label: 'Product', to: '/admin/content/product' },
           { label: 'Master Data', to: '/admin/content/master-data' },
-          { label: 'Tech Task', to: '/admin/content/tech-task' },
+          { label: 'Tech Stack', to: '/admin/content/tech-stack' },
           { label: 'Partner', to: '/admin/content/partner' }
         ]
       },

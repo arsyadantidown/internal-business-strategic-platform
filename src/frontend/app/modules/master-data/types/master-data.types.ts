@@ -28,9 +28,9 @@ export interface MasterDataItem {
 export interface MasterDataFormValues {
   code: string
   name: string
-  description: string
-  sortOrder: number | null
-  isActive: boolean
+  description?: string
+  sortOrder?: number | null
+  isActive?: boolean
 }
 
 export type MasterDataStatusFilter = '' | 'active' | 'inactive'

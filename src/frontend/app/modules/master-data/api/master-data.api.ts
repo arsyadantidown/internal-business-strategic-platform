@@ -30,8 +30,8 @@ const normalizeMasterDataItem = (
   isActive: raw.is_active === true
 })
 
-const buildDescriptionPayload = (description: string): string | null =>
-  description.trim().length > 0 ? description : null
+const buildDescriptionPayload = (description?: string): string | null =>
+  typeof description === 'string' && description.trim().length > 0 ? description.trim() : null
 
 export const masterDataApi = {
   async list(
@@ -50,14 +50,22 @@ export const masterDataApi = {
     category: MasterDataCategory,
     values: MasterDataFormValues
   ): Promise<MasterDataMutationResult> {
+    const payload: Record<string, unknown> = {
+      [`${category.prefix}_code`]: values.code,
+      [`${category.prefix}_name`]: values.name
+    }
+
+    if (values.description !== undefined) {
+      payload[`${category.prefix}_description`] = buildDescriptionPayload(values.description)
+    }
+
+    if (values.sortOrder !== undefined) {
+      payload.sort_order = values.sortOrder
+    }
+
     const response = await apiClient.post<MasterDataApiEnvelope<MasterDataRawItem>>(
       `${ENDPOINTS.MASTER_DATA.BASE}/${category.type}`,
-      {
-        [`${category.prefix}_code`]: values.code,
-        [`${category.prefix}_name`]: values.name,
-        [`${category.prefix}_description`]: buildDescriptionPayload(values.description),
-        sort_order: values.sortOrder
-      }
+      payload
     )
     return {
       item: normalizeMasterDataItem(category, response.data?.data ?? {}),
@@ -70,14 +78,25 @@ export const masterDataApi = {
     itemId: string,
     values: MasterDataFormValues
   ): Promise<MasterDataMutationResult> {
+    const payload: Record<string, unknown> = {
+      [`${category.prefix}_name`]: values.name
+    }
+
+    if (values.description !== undefined) {
+      payload[`${category.prefix}_description`] = buildDescriptionPayload(values.description)
+    }
+
+    if (values.sortOrder !== undefined) {
+      payload.sort_order = values.sortOrder
+    }
+
+    if (values.isActive !== undefined) {
+      payload.is_active = values.isActive
+    }
+
     const response = await apiClient.patch<MasterDataApiEnvelope<MasterDataRawItem>>(
       `${ENDPOINTS.MASTER_DATA.BASE}/${category.type}/${itemId}`,
-      {
-        [`${category.prefix}_name`]: values.name,
-        [`${category.prefix}_description`]: buildDescriptionPayload(values.description),
-        sort_order: values.sortOrder,
-        is_active: values.isActive
-      }
+      payload
     )
     return {
       item: normalizeMasterDataItem(category, response.data?.data ?? {}),
@@ -87,28 +106,25 @@ export const masterDataApi = {
 
   async toggleActive(
     category: MasterDataCategory,
-    itemId: string,
-    isActive: boolean
+    item: MasterDataItem
   ): Promise<MasterDataMutationResult> {
-    const response = await apiClient.patch<MasterDataApiEnvelope<MasterDataRawItem>>(
-      `${ENDPOINTS.MASTER_DATA.BASE}/${category.type}/${itemId}`,
-      { is_active: isActive }
-    )
-    return {
-      item: normalizeMasterDataItem(category, response.data?.data ?? {}),
-      message: readText(response.data?.message)
-    }
+    return this.update(category, item.id, {
+      code: item.code,
+      name: item.name,
+      isActive: !item.isActive
+    })
   },
 
-  async remove(
+  async delete(
     category: MasterDataCategory,
     itemId: string
   ): Promise<MasterDataDeleteResult> {
     const response = await apiClient.delete<
-      MasterDataApiEnvelope<{ id?: unknown, deleted?: unknown }>
+      MasterDataApiEnvelope<{ deleted: boolean } | null>
     >(`${ENDPOINTS.MASTER_DATA.BASE}/${category.type}/${itemId}`)
+
     return {
-      deleted: response.data?.data?.deleted === true,
+      deleted: response.data?.data?.deleted !== false,
       message: readText(response.data?.message)
     }
   }
