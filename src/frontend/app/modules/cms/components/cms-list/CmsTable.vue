@@ -198,11 +198,17 @@ const avatarClass = (name: string) => {
 
           <!-- Empty State -->
           <tr v-if="contents.length === 0">
-            <td colspan="6" class="px-6 py-10 text-center">
-              <div class="flex flex-col items-center gap-2">
-                <UIcon name="i-lucide-search-x" class="h-8 w-8 text-slate-300" />
-                <p class="text-sm font-semibold text-slate-600">No {{ kind }} content found</p>
-                <p class="text-xs text-slate-400">Try adjusting your search or status filter.</p>
+            <td colspan="6" class="px-6 py-16 text-center">
+              <div class="flex flex-col items-center justify-center max-w-sm mx-auto text-center">
+                <div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 mb-3">
+                  <UIcon name="i-lucide-folder-search" class="h-6 w-6 text-slate-400" />
+                </div>
+                <h3 class="text-sm font-semibold text-slate-800">
+                  No {{ kind }} content found
+                </h3>
+                <p class="mt-1 text-xs text-slate-500 leading-relaxed">
+                  We couldn't find any results matching your search or active filter criteria. Try adjusting your filters or search keywords.
+                </p>
               </div>
             </td>
           </tr>

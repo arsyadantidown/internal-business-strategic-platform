@@ -112,8 +112,10 @@ export function useCmsContent(initialKind: CmsContentKind = 'portfolio') {
   watch(
     () => portfolioStore.projects,
     (projects) => {
-      if (projects && projects.length > 0) {
+      if (projects) {
         portfolioContents.value = projects.map(mapProjectToCmsPortfolio)
+      } else {
+        portfolioContents.value = []
       }
     },
     { immediate: true }

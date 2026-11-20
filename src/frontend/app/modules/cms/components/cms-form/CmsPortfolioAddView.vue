@@ -68,8 +68,8 @@ const scrollToSection = (id: string) => {
 
 // File Upload Handlers (Local)
 const handleCoverImage = (files: File[]) => {
-  if (!files.length) return
   const file = files[0]
+  if (!file) return
   if (featuredCover.value?.previewUrl) {
     URL.revokeObjectURL(featuredCover.value.previewUrl)
   }
@@ -108,8 +108,8 @@ const removeGalleryImage = (index: number) => {
 }
 
 const handleCaseStudy = (files: File[]) => {
-  if (!files.length) return
   const file = files[0]
+  if (!file) return
   caseStudyFile.value = {
     file,
     category: 'case_study',

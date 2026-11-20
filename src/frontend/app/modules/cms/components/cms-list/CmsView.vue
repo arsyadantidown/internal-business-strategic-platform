@@ -43,6 +43,7 @@ const {
   paginatedContents,
   totalResults,
   totalContents,
+  isLoading,
   createContent,
   updateContent,
   deleteContent,
@@ -242,6 +243,7 @@ const closePartnershipForm = () => {
       :total-contents="totalContents"
       :current-page="currentPage"
       :page-size="pageSize"
+      :is-loading="isLoading"
       @update:filters="handleFilters"
       @update:current-page="setPage"
       @update:page-size="setPageSize"
