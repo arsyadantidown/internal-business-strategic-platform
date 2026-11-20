@@ -37,6 +37,7 @@ src/backend/app/config/env/.env
 # Secrets / Credentials
 # =========================
 src/backend/app/config/credentials/
+secrets/
 
 # =========================
 # Logs
