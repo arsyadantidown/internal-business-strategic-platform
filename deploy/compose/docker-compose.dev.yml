@@ -36,6 +36,7 @@ services:
     volumes:
       - ../../src/backend/app:/app/app
       - ../../src/backend/db_migrations:/app/db_migrations
+      - ${GCS_KEY_DIR:-../../secrets}:/secrets:ro
     networks:
       - backend_net
       - db_net
