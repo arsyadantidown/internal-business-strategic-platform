@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import CmsPagination from '~/modules/cms/components/cms-list/CmsPagination.vue'
 import MasterDataCategoryNav from './MasterDataCategoryNav.vue'
 import MasterDataPageHeader from './MasterDataPageHeader.vue'
@@ -8,46 +8,15 @@ import MasterDataTable from './MasterDataTable.vue'
 import MasterDataToolbar from './MasterDataToolbar.vue'
 import MasterDataFormModal from '../master-data-form/MasterDataFormModal.vue'
 import MasterDataDeleteDialog from '../master-data-form/MasterDataDeleteDialog.vue'
-import { getMasterDataErrorMessage, useMasterData } from './useMasterData'
+import { getMasterDataErrorMessage, useMasterDataStore } from '../../stores/master-data.store'
 import type { MasterDataFormValues, MasterDataItem } from '../../types/master-data.types'
 
 const toast = useToast()
-
-const {
-  masterDataCategories,
-  activeCategoryType,
-  activeCategory,
-  isLoading,
-  loadError,
-  canViewInactive,
-  isSaving,
-  isDeleting,
-  togglingId,
-  filters,
-  currentPage,
-  pageSize,
-  stats,
-  paginatedItems,
-  totalResults,
-  retryLoad,
-  createItem,
-  updateItem,
-  toggleActive,
-  deleteItem,
-  setFilters,
-  resetFilters,
-  setPage,
-  setPageSize,
-  selectCategory
-} = useMasterData()
+const masterDataStore = useMasterDataStore()
 
 const isFormOpen = ref(false)
 const editingItem = ref<MasterDataItem | null>(null)
 const deleteTarget = ref<MasterDataItem | null>(null)
-
-const hasActiveFilters = computed(() =>
-  filters.value.search.trim() !== '' || filters.value.status !== ''
-)
 
 const openCreateForm = () => {
   editingItem.value = null
@@ -65,31 +34,26 @@ const closeForm = () => {
 }
 
 const handleFormSubmit = async (values: MasterDataFormValues) => {
-  const category = activeCategory.value
-
   try {
     if (editingItem.value) {
-      await updateItem(editingItem.value, values)
+      const result = await masterDataStore.updateItem(editingItem.value, values)
       toast.add({
-        title: `${category.singular} updated`,
-        description: `"${values.name}" has been updated successfully.`,
+        title: `${masterDataStore.activeCategory.singular} updated`,
+        description: result.message || `"${result.item.name}" has been updated.`,
         color: 'success'
       })
-      closeForm()
     } else {
-      await createItem(values)
+      const result = await masterDataStore.createItem(values)
       toast.add({
-        title: `${category.singular} added`,
-        description: `"${values.name}" has been added to ${category.label.toLowerCase()}.`,
+        title: `${masterDataStore.activeCategory.singular} added`,
+        description: result.message || `"${result.item.name}" has been added.`,
         color: 'success'
       })
-      closeForm()
-      resetFilters()
-      setPage(1)
     }
+    closeForm()
   } catch (error) {
     toast.add({
-      title: `Failed to save ${category.singular.toLowerCase()}`,
+      title: 'Action failed',
       description: getMasterDataErrorMessage(error),
       color: 'error'
     })
@@ -97,18 +61,16 @@ const handleFormSubmit = async (values: MasterDataFormValues) => {
 }
 
 const handleToggleActive = async (item: MasterDataItem) => {
-  const category = activeCategory.value
-
   try {
-    await toggleActive(item)
+    const result = await masterDataStore.toggleActive(item)
     toast.add({
-      title: item.isActive ? `${category.singular} deactivated` : `${category.singular} activated`,
-      description: `"${item.name}" is now ${item.isActive ? 'inactive and hidden from selection forms' : 'active and selectable'}.`,
+      title: 'Status changed',
+      description: `"${result.item.name}" is now ${result.item.isActive ? 'active' : 'inactive'}.`,
       color: 'success'
     })
   } catch (error) {
     toast.add({
-      title: `Failed to update ${category.singular.toLowerCase()}`,
+      title: 'Action failed',
       description: getMasterDataErrorMessage(error),
       color: 'error'
     })
@@ -120,104 +82,108 @@ const openDeleteDialog = (item: MasterDataItem) => {
 }
 
 const closeDeleteDialog = () => {
+  if (masterDataStore.isDeleting) return
   deleteTarget.value = null
 }
 
 const handleDeleteConfirm = async () => {
+  if (!deleteTarget.value) return
   const target = deleteTarget.value
-  const category = activeCategory.value
-
-  if (!target) return
 
   try {
-    const result = await deleteItem(target)
-
-    if (result.deleted) {
-      toast.add({
-        title: `${category.singular} deleted`,
-        description: `"${target.name}" has been permanently deleted.`,
-        color: 'success'
-      })
-    } else {
-      toast.add({
-        title: `${category.singular} deactivated instead`,
-        description: `"${target.name}" is still used by existing records, so it was deactivated and hidden from selection forms.`,
-        color: 'warning'
-      })
-    }
-
+    const result = await masterDataStore.deleteItem(target)
+    toast.add({
+      title: result.deleted
+        ? `${masterDataStore.activeCategory.singular} deleted`
+        : `${masterDataStore.activeCategory.singular} deactivated`,
+      description:
+        result.message ||
+        (result.deleted
+          ? `"${target.name}" has been permanently removed.`
+          : `"${target.name}" is in use and has been marked inactive instead.`),
+      color: 'success'
+    })
     closeDeleteDialog()
   } catch (error) {
     toast.add({
-      title: `Failed to delete ${category.singular.toLowerCase()}`,
+      title: 'Action failed',
       description: getMasterDataErrorMessage(error),
       color: 'error'
     })
   }
 }
+
+onMounted(() => {
+  masterDataStore.fetchItems()
+})
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="flex flex-col gap-6">
     <MasterDataPageHeader
-      :category="activeCategory"
+      :category="masterDataStore.activeCategory"
       @add="openCreateForm"
     />
 
     <MasterDataCategoryNav
-      :categories="masterDataCategories"
-      :active-type="activeCategoryType"
-      @select="selectCategory"
+      :categories="masterDataStore.masterDataCategories"
+      :active-type="masterDataStore.activeCategoryType"
+      @select="masterDataStore.selectCategory"
     />
 
-    <MasterDataStats :stats="stats" />
+    <MasterDataStats :stats="masterDataStore.stats" />
 
     <MasterDataToolbar
-      :filters="filters"
-      :can-view-inactive="canViewInactive"
-      @update="setFilters"
-      @reset="resetFilters"
+      :filters="masterDataStore.filters"
+      :can-view-inactive="masterDataStore.canViewInactive"
+      @update="masterDataStore.setFilters"
+      @reset="masterDataStore.resetFilters"
     />
 
     <MasterDataTable
-      :category="activeCategory"
-      :items="paginatedItems"
-      :is-loading="isLoading"
-      :load-error="loadError"
-      :total-results="totalResults"
-      :has-active-filters="hasActiveFilters"
-      :toggling-id="togglingId"
+      :category="masterDataStore.activeCategory"
+      :items="masterDataStore.paginatedItems"
+      :is-loading="masterDataStore.isLoading"
+      :load-error="masterDataStore.loadError"
+      :total-results="masterDataStore.totalResults"
+      :has-active-filters="masterDataStore.hasActiveFilters"
+      :toggling-id="masterDataStore.togglingId"
       @add="openCreateForm"
+      @retry="masterDataStore.retryLoad"
       @edit="openEditForm"
       @delete="openDeleteDialog"
       @toggle="handleToggleActive"
-      @retry="retryLoad"
     />
 
-    <CmsPagination
-      v-if="!isLoading && !loadError && totalResults > 0"
-      v-model:current-page="currentPage"
-      v-model:page-size="pageSize"
-      :total-items="totalResults"
-      item-label="entries"
-      @update:current-page="setPage"
-      @update:page-size="setPageSize"
-    />
+    <div
+      v-if="masterDataStore.totalResults > 0"
+      class="flex justify-end"
+    >
+      <CmsPagination
+        :current-page="masterDataStore.currentPage"
+        :page-size="masterDataStore.pageSize"
+        :total-items="masterDataStore.totalResults"
+        :item-label="masterDataStore.activeCategory.label.toLowerCase()"
+        @update:current-page="masterDataStore.setPage"
+        @update:page-size="masterDataStore.setPageSize"
+      />
+    </div>
 
+    <!-- Modals -->
     <MasterDataFormModal
       :is-open="isFormOpen"
-      :category="activeCategory"
+      :category="masterDataStore.activeCategory"
       :editing-item="editingItem"
-      :is-saving="isSaving"
+      :is-saving="masterDataStore.isSaving"
       @close="closeForm"
       @submit="handleFormSubmit"
     />
 
     <MasterDataDeleteDialog
       :is-open="deleteTarget !== null"
-      :category="activeCategory"
+      :category="masterDataStore.activeCategory"
       :target="deleteTarget"
-      :is-deleting="isDeleting"
+      :is-deleting="masterDataStore.isDeleting"
       @close="closeDeleteDialog"
       @confirm="handleDeleteConfirm"
     />
