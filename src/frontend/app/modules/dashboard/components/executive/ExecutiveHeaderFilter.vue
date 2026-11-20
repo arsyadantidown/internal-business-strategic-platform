@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { useCustomerStore } from '~/modules/customer/stores/customer.store'
 import { useMasterDataStore } from '~/modules/portofolio/stores/master-data.store'
+import ExecutiveYearPicker from './ExecutiveYearPicker.vue'
 
 // Customer Store & Master Data Store dari modul portofolio
 const customerStore = useCustomerStore()
@@ -183,19 +184,8 @@ const selectClass =
         />
       </div>
 
-      <!-- Years -->
-      <div class="relative">
-        <select v-model="filters.year" :class="selectClass">
-          <option value="">All Years</option>
-          <option value="2026">2026</option>
-          <option value="2025">2025</option>
-          <option value="2024">2024</option>
-        </select>
-        <UIcon
-          name="i-lucide-chevron-down"
-          class="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
-        />
-      </div>
+      <!-- Years (Custom Year Picker) -->
+      <ExecutiveYearPicker v-model="filters.year" />
 
       <!-- More Filters Toggle Button -->
       <button
