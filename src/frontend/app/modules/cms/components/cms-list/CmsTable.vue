@@ -3,6 +3,7 @@ import type { CmsContent, CmsContentKind } from '../../types/cms.types'
 import { formatCmsScheduledAt, getCmsInitials } from '../../utils/cmsFormat'
 import { useAppDate } from '~/composables/useAppDate'
 import CmsStatusBadge from './CmsStatusBadge.vue'
+import PortofolioStatusBadge from '~/modules/portofolio/components/portofolio-list/PortofolioStatusBadge.vue'
 
 interface Props {
   contents: CmsContent[]
@@ -99,7 +100,7 @@ const avatarClass = (name: string) => {
                   {{ content.client }}
                 </p>
                 <p class="mt-0.5 max-w-[190px] truncate text-[10px] font-medium text-slate-400">
-                  {{ content.industry }} · {{ content.projectStatus }}
+                  {{ content.industry }}
                 </p>
               </template>
               <template v-else>
@@ -145,13 +146,18 @@ const avatarClass = (name: string) => {
 
             <!-- Status Badge -->
             <td class="whitespace-nowrap px-3 py-2.5">
-              <CmsStatusBadge :status="content.status" />
-              <p
-                v-if="content.status === 'Scheduled' && content.scheduledAt"
-                class="mt-1 text-[10px] font-medium text-sky-600"
-              >
-                {{ formatCmsScheduledAt(content.scheduledAt) }}
-              </p>
+              <template v-if="content.kind === 'portfolio'">
+                <PortofolioStatusBadge :status="content.projectStatus" />
+              </template>
+              <template v-else>
+                <CmsStatusBadge :status="content.status" />
+                <p
+                  v-if="content.status === 'Scheduled' && content.scheduledAt"
+                  class="mt-1 text-[10px] font-medium text-sky-600"
+                >
+                  {{ formatCmsScheduledAt(content.scheduledAt) }}
+                </p>
+              </template>
             </td>
 
             <!-- Actions -->

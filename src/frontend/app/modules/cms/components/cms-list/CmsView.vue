@@ -110,7 +110,20 @@ const handleSavePortfolio = () => {
   portfolioStore.fetchProjects({
     page: currentPage.value,
     page_size: pageSize.value,
-    search: filters.value.search || undefined
+    search: filters.value.search ? filters.value.search.trim() : undefined,
+    is_featured: filters.value.isFeatured !== undefined ? filters.value.isFeatured : undefined,
+    industry_id: filters.value.industryId || undefined,
+    project_status_id: filters.value.projectStatusId || undefined,
+    year: filters.value.year ? Number(filters.value.year) : undefined,
+    company_size_id: filters.value.companySizeId || undefined,
+    customer_type_id: filters.value.customerTypeId || undefined,
+    legal_structure_id: filters.value.legalStructureId || undefined,
+    business_unit_id: filters.value.businessUnitId || undefined,
+    tech_stack_id:
+      filters.value.databaseId ||
+      filters.value.backendStackId ||
+      filters.value.frontendStackId ||
+      undefined
   })
   isPortfolioFormOpen.value = false
   editingContent.value = null

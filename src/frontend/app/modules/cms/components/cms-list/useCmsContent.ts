@@ -66,7 +66,8 @@ const mapProjectToCmsPortfolio = (project: ProjectItem): CmsPortfolioContent => 
     technologies: project.technologies || [],
     partners: [],
     visibility: 'Internal',
-    projectType: 'Project'
+    projectType: 'Project',
+    serviceType: 'End-to-End Delivery'
   }
 }
 
@@ -82,12 +83,28 @@ export function useCmsContent(initialKind: CmsContentKind = 'portfolio') {
   const isHydrated = ref(false)
   let scheduleTimer: ReturnType<typeof setInterval> | undefined
 
-  // Mengambil daftar project dari Pinia portfolioStore
+  // Mengambil daftar project dari Pinia portfolioStore dengan semua filter
   const loadPortfolioData = () => {
+    // tech_stack_id prioritaskan database, lalu backend, lalu frontend jika dipilih salah satu
+    const techStackId =
+      filters.value.databaseId ||
+      filters.value.backendStackId ||
+      filters.value.frontendStackId ||
+      undefined
+
     portfolioStore.fetchProjects({
       page: 1,
       page_size: 50,
-      search: filters.value.search || undefined
+      search: filters.value.search ? filters.value.search.trim() : undefined,
+      is_featured: filters.value.isFeatured !== undefined ? filters.value.isFeatured : undefined,
+      industry_id: filters.value.industryId || undefined,
+      project_status_id: filters.value.projectStatusId || undefined,
+      year: filters.value.year ? Number(filters.value.year) : undefined,
+      company_size_id: filters.value.companySizeId || undefined,
+      customer_type_id: filters.value.customerTypeId || undefined,
+      legal_structure_id: filters.value.legalStructureId || undefined,
+      business_unit_id: filters.value.businessUnitId || undefined,
+      tech_stack_id: techStackId
     })
   }
 
@@ -422,7 +439,7 @@ export function useCmsContent(initialKind: CmsContentKind = 'portfolio') {
     { deep: true }
   )
 
-  // Watcher search debounce untuk memanggil ulang API bila input search diubah
+  // Watcher filters: debounce untuk search, dan trigger loadPortfolioData saat filter dropdown berubah
   let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined
   watch(
     () => filters.value.search,
@@ -432,6 +449,30 @@ export function useCmsContent(initialKind: CmsContentKind = 'portfolio') {
         searchDebounceTimer = setTimeout(() => {
           loadPortfolioData()
         }, 400)
+      }
+    }
+  )
+
+  // Watcher untuk semua dropdown filters non-search
+  watch(
+    () => [
+      filters.value.isFeatured,
+      filters.value.industryId,
+      filters.value.projectStatusId,
+      filters.value.year,
+      filters.value.companySizeId,
+      filters.value.customerName,
+      filters.value.customerLocation,
+      filters.value.legalStructureId,
+      filters.value.businessUnitId,
+      filters.value.customerTypeId,
+      filters.value.frontendStackId,
+      filters.value.backendStackId,
+      filters.value.databaseId
+    ],
+    () => {
+      if (activeKind.value === 'portfolio') {
+        loadPortfolioData()
       }
     }
   )
