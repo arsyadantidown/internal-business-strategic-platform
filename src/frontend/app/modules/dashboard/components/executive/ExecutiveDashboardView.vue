@@ -1,67 +1,80 @@
 <script setup lang="ts">
-import DashboardKpiCard from '../shared/DashboardKpiCard.vue'
-import BusinessPerformanceTrendCard from './BusinessPerformanceTrendCard.vue'
-import PortfolioStatusCard from './PortfolioStatusCard.vue'
-import RevenuePipelineCard from './RevenuePipelineCard.vue'
-import RoiByCategoryCard from './RoiByCategoryCard.vue'
-import TopCategoriesCard from './TopCategoriesCard.vue'
-import FeaturedPortfolioCard from './FeaturedPortfolioCard.vue'
+import { onMounted } from 'vue'
+import { useDashboardStore } from '../../stores/dashboard.store'
+import ExecutiveHeaderFilter from './ExecutiveHeaderFilter.vue'
+import ExecutiveStatCards from './ExecutiveStatCards.vue'
+import ExecutiveProjectsByIndustryCard from './ExecutiveProjectsByIndustryCard.vue'
+import ExecutiveProjectStatusCard from './ExecutiveProjectStatusCard.vue'
+import ExecutiveBusinessUnitShareCard from './ExecutiveBusinessUnitShareCard.vue'
 
-import {
-  activeProjectsTotal,
-  averageRoi,
-  executiveKpis,
-  featuredProjects,
-  openPipelineValue,
-  portfolioStatus,
-  revenuePipeline,
-  topCategories
-} from '../../data/executive.data'
+const dashboardStore = useDashboardStore()
 
-const { visibleTrend } = useDashboardRange()
+onMounted(() => {
+  // Panggil semua API dashboard saat mount
+  dashboardStore.fetchSummary({ is_featured: true })
+  dashboardStore.fetchProjectsByBusinessUnit({ is_featured: true })
+  dashboardStore.fetchProjectsByIndustry({ is_featured: true })
+})
+
+const handleFilterChange = (filters: any) => {
+  const params = {
+    search: filters.search || undefined,
+    is_featured: filters.isFeatured ?? undefined,
+    industry_id: filters.industry || undefined,
+    project_status_id: filters.status || undefined,
+    year: filters.year ? Number(filters.year) : undefined,
+    company_size_id: filters.companySize || undefined,
+    customer_name: filters.customerName || undefined,
+    customer_location: filters.customerLocation || undefined,
+    legal_structure_id: filters.legalStructure || undefined,
+    business_unit_id: filters.businessUnit || undefined,
+    customer_type_id: filters.customerType || undefined,
+    tech_stack_id:
+      filters.frontendStack || filters.backendStack || filters.database || undefined,
+    frontend_tech_stack_id: filters.frontendStack || undefined,
+    backend_tech_stack_id: filters.backendStack || undefined,
+    database_tech_stack_id: filters.database || undefined
+  }
+
+  dashboardStore.fetchSummary(params)
+  dashboardStore.fetchProjectsByBusinessUnit(params)
+  dashboardStore.fetchProjectsByIndustry(params)
+}
+
+const handleFilterReset = () => {
+  dashboardStore.fetchSummary({ is_featured: true })
+  dashboardStore.fetchProjectsByBusinessUnit({ is_featured: true })
+  dashboardStore.fetchProjectsByIndustry({ is_featured: true })
+}
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <!-- KPI Cards -->
-    <div class="grid shrink-0 grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-      <DashboardKpiCard
-        v-for="kpi in executiveKpis"
-        :key="kpi.label"
-        v-bind="kpi"
-      />
-    </div>
+  <div class="flex flex-col gap-4 pb-8 font-sans">
+    <!-- 1. Header & Filter Bar -->
+    <ExecutiveHeaderFilter @update:filters="handleFilterChange" @reset="handleFilterReset" />
 
-    <!-- Performance Trend + Portfolio Status -->
-    <div class="grid shrink-0 grid-cols-1 gap-2 lg:grid-cols-3">
-      <BusinessPerformanceTrendCard
-        :points="visibleTrend"
-        class="lg:col-span-2"
-      />
-      <PortfolioStatusCard :slices="portfolioStatus" />
-    </div>
+    <!-- 2. KPI Summary Cards -->
+    <ExecutiveStatCards :stats="dashboardStore.statCardsData" />
 
-    <!-- Revenue Pipeline + ROI by Category + Top Categories -->
-    <div class="grid shrink-0 grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-      <RevenuePipelineCard
-        :stages="revenuePipeline"
-        :open-value="openPipelineValue"
-      />
-      <RoiByCategoryCard
-        :categories="topCategories"
-        :average="averageRoi"
-      />
-      <TopCategoriesCard
-        :categories="topCategories"
-        :total="activeProjectsTotal"
-        class="md:col-span-2 lg:col-span-1"
-      />
-    </div>
+    <!-- 3. Main Analytics Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
+      <!-- Left Column: Projects by Industry -->
+      <div class="lg:col-span-7">
+        <ExecutiveProjectsByIndustryCard
+          :industries="dashboardStore.industryList"
+          :active-verticals-count="dashboardStore.industryList.length"
+          :insight-text="dashboardStore.topIndustryInsight"
+        />
+      </div>
 
-    <!-- Featured Portfolio -->
-    <FeaturedPortfolioCard
-      :projects="featuredProjects"
-      class="shrink-0"
-    />
+      <!-- Right Column: Project Status Donut + Business Unit Share -->
+      <div class="lg:col-span-5 flex flex-col gap-4">
+        <ExecutiveProjectStatusCard
+          :total-projects="dashboardStore.summary.total_projects"
+          :slices="dashboardStore.projectStatusSlices"
+        />
+        <ExecutiveBusinessUnitShareCard :units="dashboardStore.businessUnitShares" />
+      </div>
+    </div>
   </div>
 </template>

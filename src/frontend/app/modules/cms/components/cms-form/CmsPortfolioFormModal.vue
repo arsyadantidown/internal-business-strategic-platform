@@ -103,10 +103,10 @@ const modalTitle = computed(() =>
 const currentStatusLabel = computed(() => props.content?.status ?? 'Draft')
 
 const partnerNames = computed<string[]>({
-  get: () => form.value.partners.map(partner => partner.name),
+  get: () => form.value.partners.map((partner) => partner.name),
   set: (names) => {
     form.value.partners = names.map((name) => {
-      const existing = form.value.partners.find(partner => partner.name === name)
+      const existing = form.value.partners.find((partner) => partner.name === name)
       return existing ?? { name, role: 'Partner', tag: 'Related Partner' }
     })
   }
@@ -187,25 +187,24 @@ const validate = (action: CmsContentSaveAction) => {
 const handleSubmit = (action: CmsContentSaveAction) => {
   if (!validate(action)) return
 
-  const {
-    challengesText,
-    solutionsText,
-    documentsText,
-    ...values
-  } = form.value
+  const { challengesText, solutionsText, documentsText, ...values } = form.value
 
-  emit('save', {
-    ...values,
-    status: action === 'publish' ? 'Published' : action === 'schedule' ? 'Scheduled' : 'Draft',
-    publishedAt: action === 'publish' ? new Date().toISOString() : '',
-    scheduledAt: action === 'schedule' ? values.scheduledAt : '',
-    title: values.title.trim(),
-    summary: values.summary.trim(),
-    client: values.client.trim(),
-    challenges: splitCmsLines(challengesText),
-    solutions: splitCmsLines(solutionsText),
-    documents: parseCmsDocuments(documentsText)
-  }, action)
+  emit(
+    'save',
+    {
+      ...values,
+      status: action === 'publish' ? 'Published' : action === 'schedule' ? 'Scheduled' : 'Draft',
+      publishedAt: action === 'publish' ? new Date().toISOString() : '',
+      scheduledAt: action === 'schedule' ? values.scheduledAt : '',
+      title: values.title.trim(),
+      summary: values.summary.trim(),
+      client: values.client.trim(),
+      challenges: splitCmsLines(challengesText),
+      solutions: splitCmsLines(solutionsText),
+      documents: parseCmsDocuments(documentsText)
+    },
+    action
+  )
 }
 
 watch(
@@ -223,21 +222,26 @@ watch(
     class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 p-4 py-6 font-sans backdrop-blur-sm"
     @click.self="emit('close')"
   >
-    <div class="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl">
+    <div
+      class="relative w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl"
+    >
       <div class="flex items-start justify-between border-b border-slate-100 px-6 py-4">
         <div class="flex items-start gap-3">
-          <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <UIcon
-              :name="isEditing ? 'i-lucide-pencil' : 'i-lucide-briefcase'"
-              class="h-4 w-4"
-            />
+          <div
+            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600"
+          >
+            <UIcon :name="isEditing ? 'i-lucide-pencil' : 'i-lucide-briefcase'" class="h-4 w-4" />
           </div>
           <div>
             <h2 class="text-sm font-bold tracking-tight text-slate-900">
               {{ modalTitle }}
             </h2>
             <p class="mt-0.5 text-[11px] text-slate-500">
-              {{ isEditing ? 'Update the portfolio content and publication settings.' : 'Fill in the portfolio details across each content section.' }}
+              {{
+                isEditing
+                  ? 'Update the portfolio content and publication settings.'
+                  : 'Fill in the portfolio details across each content section.'
+              }}
             </p>
           </div>
         </div>
@@ -248,10 +252,7 @@ watch(
           aria-label="Close"
           @click="emit('close')"
         >
-          <UIcon
-            name="i-lucide-x"
-            class="h-4 w-4"
-          />
+          <UIcon name="i-lucide-x" class="h-4 w-4" />
         </button>
       </div>
 
@@ -277,7 +278,7 @@ watch(
                 :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.title))]"
                 @input="clearError('title')"
                 @blur="handleTitleBlur"
-              >
+              />
             </CmsFormField>
 
             <CmsFormField
@@ -293,12 +294,7 @@ watch(
                 :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.projectType))]"
                 @change="clearError('projectType')"
               >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select project type
-                </option>
+                <option value="" disabled>Select project type</option>
                 <option
                   v-for="option in cmsProjectTypeOptions"
                   :key="option.value"
@@ -322,12 +318,7 @@ watch(
                 :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.serviceType))]"
                 @change="clearError('serviceType')"
               >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select service type
-                </option>
+                <option value="" disabled>Select service type</option>
                 <option
                   v-for="option in cmsServiceTypeOptions"
                   :key="option.value"
@@ -351,12 +342,7 @@ watch(
                 :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.industry))]"
                 @change="clearError('industry')"
               >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select industry
-                </option>
+                <option value="" disabled>Select industry</option>
                 <option
                   v-for="option in portfolioIndustryOptions"
                   :key="option.value"
@@ -385,16 +371,15 @@ watch(
               />
             </CmsFormField>
 
-            <CmsFormField
-              label="Featured"
-              full
-            >
-              <label class="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600">
+            <CmsFormField label="Featured" full>
+              <label
+                class="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600"
+              >
                 <input
                   v-model="form.featured"
                   type="checkbox"
                   class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                >
+                />
                 Highlight this portfolio item on the public directory
               </label>
             </CmsFormField>
@@ -419,25 +404,17 @@ watch(
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.client))]"
                 @input="clearError('client')"
-              >
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Client Industry"
-              html-for="portfolio-client-industry"
-            >
+            <CmsFormField label="Client Industry" html-for="portfolio-client-industry">
               <select
                 id="portfolio-client-industry"
                 v-model="form.clientIndustry"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select client industry
-                </option>
+                <option value="" disabled>Select client industry</option>
                 <option
                   v-for="option in portfolioIndustryOptions"
                   :key="option.value"
@@ -448,10 +425,7 @@ watch(
               </select>
             </CmsFormField>
 
-            <CmsFormField
-              label="Client Location"
-              html-for="portfolio-client-location"
-            >
+            <CmsFormField label="Client Location" html-for="portfolio-client-location">
               <input
                 id="portfolio-client-location"
                 v-model="form.clientLocation"
@@ -459,13 +433,10 @@ watch(
                 placeholder="City, Country"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Contact Name"
-              html-for="portfolio-contact-name"
-            >
+            <CmsFormField label="Contact Name" html-for="portfolio-contact-name">
               <input
                 id="portfolio-contact-name"
                 v-model="form.contactName"
@@ -473,14 +444,10 @@ watch(
                 placeholder="Primary client contact"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Contact Email"
-              html-for="portfolio-contact-email"
-              full
-            >
+            <CmsFormField label="Contact Email" html-for="portfolio-contact-email" full>
               <input
                 id="portfolio-contact-email"
                 v-model="form.contactEmail"
@@ -488,7 +455,7 @@ watch(
                 placeholder="name@company.com"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
           </CmsFormSection>
 
@@ -510,12 +477,7 @@ watch(
                 :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.projectStatus))]"
                 @change="clearError('projectStatus')"
               >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select project status
-                </option>
+                <option value="" disabled>Select project status</option>
                 <option
                   v-for="option in portfolioProjectStatusOptions"
                   :key="option.value"
@@ -526,10 +488,7 @@ watch(
               </select>
             </CmsFormField>
 
-            <CmsFormField
-              label="Team Size"
-              html-for="portfolio-team-size"
-            >
+            <CmsFormField label="Team Size" html-for="portfolio-team-size">
               <input
                 id="portfolio-team-size"
                 v-model="form.teamSize"
@@ -537,40 +496,30 @@ watch(
                 placeholder="e.g. 12 members"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Start Date"
-              html-for="portfolio-start-date"
-            >
+            <CmsFormField label="Start Date" html-for="portfolio-start-date">
               <input
                 id="portfolio-start-date"
                 v-model="form.startDate"
                 type="date"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="End Date"
-              html-for="portfolio-end-date"
-            >
+            <CmsFormField label="End Date" html-for="portfolio-end-date">
               <input
                 id="portfolio-end-date"
                 v-model="form.endDate"
                 type="date"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Project Location"
-              html-for="portfolio-location"
-              full
-            >
+            <CmsFormField label="Project Location" html-for="portfolio-location" full>
               <input
                 id="portfolio-location"
                 v-model="form.location"
@@ -578,7 +527,7 @@ watch(
                 placeholder="City, Country"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
           </CmsFormSection>
 
@@ -600,13 +549,10 @@ watch(
                 placeholder="e.g. 4500000000"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Currency"
-              html-for="portfolio-currency"
-            >
+            <CmsFormField label="Currency" html-for="portfolio-currency">
               <select
                 id="portfolio-currency"
                 v-model="form.currency"
@@ -623,11 +569,7 @@ watch(
               </select>
             </CmsFormField>
 
-            <CmsFormField
-              label="Funding Type"
-              html-for="portfolio-funding-type"
-              full
-            >
+            <CmsFormField label="Funding Type" html-for="portfolio-funding-type" full>
               <select
                 id="portfolio-funding-type"
                 v-model="form.fundingType"
@@ -665,11 +607,7 @@ watch(
               />
             </CmsFormField>
 
-            <CmsFormField
-              label="Background"
-              html-for="portfolio-background"
-              full
-            >
+            <CmsFormField label="Background" html-for="portfolio-background" full>
               <CmsRichTextEditor
                 id="portfolio-background"
                 v-model="form.background"
@@ -715,11 +653,7 @@ watch(
             description="Cover image and downloadable project files."
             icon="i-lucide-image"
           >
-            <CmsFormField
-              label="Cover Image URL"
-              html-for="portfolio-image"
-              full
-            >
+            <CmsFormField label="Cover Image URL" html-for="portfolio-image" full>
               <input
                 id="portfolio-image"
                 v-model="form.image"
@@ -727,7 +661,7 @@ watch(
                 placeholder="https://example.com/cover.jpg"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
-              >
+              />
             </CmsFormField>
 
             <CmsFormField
@@ -752,10 +686,7 @@ watch(
             description="Technologies and platforms used in delivery."
             icon="i-lucide-cpu"
           >
-            <CmsFormField
-              label="Technologies"
-              full
-            >
+            <CmsFormField label="Technologies" full>
               <CmsOptionChips
                 v-model="form.technologies"
                 :options="cmsTechnologyOptions"
@@ -769,10 +700,7 @@ watch(
             description="Partners involved in delivering the project."
             icon="i-lucide-handshake"
           >
-            <CmsFormField
-              label="Partners"
-              full
-            >
+            <CmsFormField label="Partners" full>
               <CmsOptionChips
                 v-model="partnerNames"
                 :options="cmsRelatedPartnerFilterOptions"
@@ -791,7 +719,9 @@ watch(
               hint="Use the action buttons below to change the publication state."
             >
               <div class="flex h-9 items-center">
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
+                <span
+                  class="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600"
+                >
                   <span class="h-1.5 w-1.5 rounded-full bg-slate-400" />
                   {{ currentStatusLabel }}
                 </span>
@@ -812,22 +742,17 @@ watch(
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.scheduledAt))]"
                 @input="clearError('scheduledAt')"
-              >
+              />
             </CmsFormField>
 
-            <CmsFormField
-              label="Visibility"
-              html-for="portfolio-visibility"
-            >
+            <CmsFormField label="Visibility" html-for="portfolio-visibility">
               <select
                 id="portfolio-visibility"
                 v-model="form.visibility"
                 class="h-9"
                 :class="[cmsControlClass, cmsControlStateClass(false)]"
               >
-                <option value="Internal">
-                  Internal
-                </option>
+                <option value="Internal">Internal</option>
               </select>
             </CmsFormField>
 
@@ -844,12 +769,7 @@ watch(
                 :class="[cmsControlClass, cmsControlStateClass(Boolean(errors.author))]"
                 @change="clearError('author')"
               >
-                <option
-                  value=""
-                  disabled
-                >
-                  Select author
-                </option>
+                <option value="" disabled>Select author</option>
                 <option
                   v-for="option in cmsAuthorOptions"
                   :key="option.value"
@@ -862,7 +782,9 @@ watch(
           </CmsFormSection>
         </div>
 
-        <div class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <div
+          class="flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-6 py-4"
+        >
           <button
             type="button"
             class="inline-flex h-9 min-w-20 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-600 shadow-2xs transition-all hover:bg-slate-50 active:scale-95 cursor-pointer"
@@ -876,10 +798,7 @@ watch(
             class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-xs font-semibold text-slate-700 shadow-2xs transition-all hover:bg-slate-50 active:scale-95 cursor-pointer"
             @click="handleSubmit('draft')"
           >
-            <UIcon
-              name="i-lucide-file-pen-line"
-              class="h-3.5 w-3.5"
-            />
+            <UIcon name="i-lucide-file-pen-line" class="h-3.5 w-3.5" />
             Save as Draft
           </button>
 
@@ -888,10 +807,7 @@ watch(
             class="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-4 text-xs font-semibold text-sky-700 shadow-2xs transition-all hover:bg-sky-100 active:scale-95 cursor-pointer"
             @click="handleSubmit('schedule')"
           >
-            <UIcon
-              name="i-lucide-calendar-clock"
-              class="h-3.5 w-3.5"
-            />
+            <UIcon name="i-lucide-calendar-clock" class="h-3.5 w-3.5" />
             Schedule
           </button>
 
@@ -900,10 +816,7 @@ watch(
             class="inline-flex h-9 min-w-28 items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-4 text-xs font-semibold text-white shadow-xs transition-all hover:bg-blue-700 active:scale-95 cursor-pointer"
             @click="handleSubmit('publish')"
           >
-            <UIcon
-              name="i-lucide-send"
-              class="h-3.5 w-3.5"
-            />
+            <UIcon name="i-lucide-send" class="h-3.5 w-3.5" />
             Publish Now
           </button>
         </div>
