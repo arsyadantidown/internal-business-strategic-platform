@@ -35,6 +35,8 @@ export const ENDPOINTS = {
     BASE: '/api/v1/projects',
     DETAIL: (projectId: string) => `/api/v1/projects/${projectId}`,
     FILES: (projectId: string) => `/api/v1/projects/${projectId}/files`,
+    FILE_DETAIL: (projectId: string, fileId: string) =>
+      `/api/v1/projects/${projectId}/files/${fileId}`,
     CUSTOMER: (projectId: string) => `/api/v1/projects/${projectId}/customer`,
     FINANCIAL: (projectId: string) => `/api/v1/projects/${projectId}/financial`,
     PRODUCTS: (projectId: string) => `/api/v1/projects/${projectId}/products`,

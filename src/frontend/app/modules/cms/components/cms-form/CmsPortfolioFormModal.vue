@@ -43,10 +43,93 @@ const {
 } = useCmsPortfolioForm()
 
 // Media local states (untuk cover preview dan case study)
-const featuredCover = ref<any>(null)
-const galleryFiles = ref<any[]>([])
-const caseStudyFile = ref<any>(null)
-const supportingDocuments = ref<any[]>([])
+export interface DisplayMediaItem {
+  id?: string
+  file?: File
+  category: string
+  title: string
+  previewUrl?: string
+  isExisting: boolean
+}
+
+const featuredCover = ref<DisplayMediaItem | null>(null)
+const galleryFiles = ref<DisplayMediaItem[]>([])
+const caseStudyFile = ref<DisplayMediaItem | null>(null)
+const supportingDocuments = ref<DisplayMediaItem[]>([])
+const deletedFileIds = ref<string[]>([])
+const submitProgressText = ref('')
+
+const syncMediaFromDetail = (files: any[]) => {
+  // Revoke previous blob URLs if any
+  if (featuredCover.value?.previewUrl && !featuredCover.value.isExisting) {
+    URL.revokeObjectURL(featuredCover.value.previewUrl)
+  }
+  galleryFiles.value.forEach((item) => {
+    if (item.previewUrl && !item.isExisting) {
+      URL.revokeObjectURL(item.previewUrl)
+    }
+  })
+
+  featuredCover.value = null
+  galleryFiles.value = []
+  caseStudyFile.value = null
+  supportingDocuments.value = []
+  deletedFileIds.value = []
+
+  if (!Array.isArray(files) || files.length === 0) return
+
+  // 1. Featured Cover: cari yang sort_order === 0 atau file_title === 'Featured Cover' di category 'image'
+  const coverItem = files.find(
+    (f: any) =>
+      f.file_category === 'image' &&
+      (f.file_title === 'Featured Cover' || f.sort_order === 0)
+  )
+  if (coverItem) {
+    featuredCover.value = {
+      id: coverItem.id,
+      category: 'image',
+      title: coverItem.file_title || 'Featured Cover',
+      previewUrl: coverItem.file_url,
+      isExisting: true
+    }
+  }
+
+  // 2. Gallery Images: category image selain cover
+  const galleryItems = files.filter((f: any) => {
+    if (f.file_category !== 'image') return false
+    if (coverItem && f.id === coverItem.id) return false
+    return true
+  })
+  galleryFiles.value = galleryItems.map((f: any) => ({
+    id: f.id,
+    category: 'image',
+    title: f.file_title || f.file_name || 'Gallery Image',
+    previewUrl: f.file_url,
+    isExisting: true
+  }))
+
+  // 3. Case Study: category 'case_study'
+  const caseItem = files.find((f: any) => f.file_category === 'case_study')
+  if (caseItem) {
+    caseStudyFile.value = {
+      id: caseItem.id,
+      category: 'case_study',
+      title: caseItem.file_title || caseItem.file_name || 'Case Study (PDF)',
+      previewUrl: caseItem.file_url,
+      isExisting: true
+    }
+  }
+
+  // 4. Supporting Documents: category 'document'
+  const docItems = files.filter((f: any) => f.file_category === 'document')
+  supportingDocuments.value = docItems.map((f: any) => ({
+    id: f.id,
+    category: 'document',
+    title: f.file_title || f.file_name || 'Supporting Document',
+    previewUrl: f.file_url,
+    isExisting: true
+  }))
+}
 
 // Partner dropdown options
 const partnerRoleOptions = [
@@ -119,6 +202,9 @@ watch(
       // Jika sebelumnya true, lalu berubah jadi false (di-uncheck oleh user):
       if (oldVal && oldVal[key] === true && newVal[key] === false) {
         revertSection(key)
+        if (key === 'media-documents') {
+          syncMediaFromDetail(form.existing_files)
+        }
       }
     })
   }
@@ -186,10 +272,11 @@ watch(
       loadOptionsOnDemand()
 
       // 2. Fetch Detail Project yang sedang diedit
-      if (content?.id) {
+      if (content && typeof content === 'object' && 'id' in content && content.id) {
         const detail = await portfolioStore.fetchProjectDetail(content.id)
         if (detail) {
           populateFormFromStore(detail)
+          syncMediaFromDetail(detail.files || [])
         }
       }
     }
@@ -214,51 +301,128 @@ const toggleTechStack = (id: string) => {
 
 // Media handlers
 const handleCoverImage = (files: File[]) => {
-  if (!files.length) return
+  if (!files.length || !files[0]) return
   const file = files[0]
-  if (featuredCover.value?.previewUrl) URL.revokeObjectURL(featuredCover.value.previewUrl)
+  if (featuredCover.value) {
+    if (featuredCover.value.id) {
+      deletedFileIds.value.push(featuredCover.value.id)
+    }
+    if (featuredCover.value.previewUrl && !featuredCover.value.isExisting) {
+      URL.revokeObjectURL(featuredCover.value.previewUrl)
+    }
+  }
   featuredCover.value = {
     file,
     category: 'image',
     title: 'Featured Cover',
-    previewUrl: URL.createObjectURL(file)
+    previewUrl: URL.createObjectURL(file),
+    isExisting: false
   }
 }
+
 const removeCoverImage = () => {
-  if (featuredCover.value?.previewUrl) URL.revokeObjectURL(featuredCover.value.previewUrl)
+  if (featuredCover.value) {
+    if (featuredCover.value.id) {
+      deletedFileIds.value.push(featuredCover.value.id)
+    }
+    if (featuredCover.value.previewUrl && !featuredCover.value.isExisting) {
+      URL.revokeObjectURL(featuredCover.value.previewUrl)
+    }
+  }
   featuredCover.value = null
 }
+
 const handleGalleryImages = (files: File[]) => {
   files.forEach((file) => {
     galleryFiles.value.push({
       file,
       category: 'image',
       title: file.name,
-      previewUrl: URL.createObjectURL(file)
+      previewUrl: URL.createObjectURL(file),
+      isExisting: false
     })
   })
 }
+
 const removeGalleryImage = (index: number) => {
   const item = galleryFiles.value[index]
-  if (item?.previewUrl) URL.revokeObjectURL(item.previewUrl)
-  galleryFiles.value.splice(index, 1)
+  if (item) {
+    if (item.id) {
+      deletedFileIds.value.push(item.id)
+    }
+    if (item.previewUrl && !item.isExisting) {
+      URL.revokeObjectURL(item.previewUrl)
+    }
+    galleryFiles.value.splice(index, 1)
+  }
 }
+
 const handleCaseStudy = (files: File[]) => {
-  if (!files.length) return
-  caseStudyFile.value = { file: files[0], category: 'case_study', title: files[0].name }
+  if (!files.length || !files[0]) return
+  const file = files[0]
+  if (caseStudyFile.value) {
+    if (caseStudyFile.value.id) {
+      deletedFileIds.value.push(caseStudyFile.value.id)
+    }
+    if (caseStudyFile.value.previewUrl && !caseStudyFile.value.isExisting) {
+      URL.revokeObjectURL(caseStudyFile.value.previewUrl)
+    }
+  }
+  caseStudyFile.value = {
+    file,
+    category: 'case_study',
+    title: file.name,
+    previewUrl: URL.createObjectURL(file),
+    isExisting: false
+  }
 }
+
+const removeCaseStudy = () => {
+  if (caseStudyFile.value) {
+    if (caseStudyFile.value.id) {
+      deletedFileIds.value.push(caseStudyFile.value.id)
+    }
+    if (caseStudyFile.value.previewUrl && !caseStudyFile.value.isExisting) {
+      URL.revokeObjectURL(caseStudyFile.value.previewUrl)
+    }
+  }
+  caseStudyFile.value = null
+}
+
 const handleSupportingDocuments = (files: File[]) => {
   files.forEach((file) => {
-    supportingDocuments.value.push({ file, category: 'document', title: file.name })
+    supportingDocuments.value.push({
+      file,
+      category: 'document',
+      title: file.name,
+      previewUrl: undefined,
+      isExisting: false
+    })
   })
 }
+
 const removeSupportingDocument = (index: number) => {
-  supportingDocuments.value.splice(index, 1)
+  const item = supportingDocuments.value[index]
+  if (item) {
+    if (item.id) {
+      deletedFileIds.value.push(item.id)
+    }
+    supportingDocuments.value.splice(index, 1)
+  }
 }
 
 onBeforeUnmount(() => {
-  if (featuredCover.value?.previewUrl) URL.revokeObjectURL(featuredCover.value.previewUrl)
-  galleryFiles.value.forEach((i) => i.previewUrl && URL.revokeObjectURL(i.previewUrl))
+  if (featuredCover.value?.previewUrl && !featuredCover.value.isExisting) {
+    URL.revokeObjectURL(featuredCover.value.previewUrl)
+  }
+  galleryFiles.value.forEach((i) => {
+    if (i.previewUrl && !i.isExisting) {
+      URL.revokeObjectURL(i.previewUrl)
+    }
+  })
+  if (caseStudyFile.value?.previewUrl && !caseStudyFile.value.isExisting) {
+    URL.revokeObjectURL(caseStudyFile.value.previewUrl)
+  }
 })
 
 // Submitting state & Handler Save Changes
@@ -267,11 +431,12 @@ const isSubmitting = ref(false)
 const handleSave = async () => {
   if (!props.content?.id) return
 
+  const isMediaEnabled = allowEdit['media-documents']
   // 1. Ambil payload tasks yang terseleksi
   const tasks = preparePayloads(allowEdit)
 
   // 2. Validasi: Jangan panggil store jika tidak ada section yang di-enable
-  if (Object.keys(tasks).length === 0) {
+  if (Object.keys(tasks).length === 0 && !isMediaEnabled) {
     toast.add({
       title: 'No Section Enabled',
       description: 'Please enable editing on at least one section before saving.',
@@ -281,14 +446,103 @@ const handleSave = async () => {
   }
 
   isSubmitting.value = true
+  submitProgressText.value = 'Saving changes...'
   try {
-    // 3. Panggil action store untuk update modular
-    await portfolioStore.updateProjectSectional(props.content.id, tasks)
+    const projectId = props.content.id
+
+    // 3. Jika ada sectional data umum (project info, customer, financial, tech stack, partner, dsb)
+    if (Object.keys(tasks).length > 0) {
+      await portfolioStore.updateProjectSectional(projectId, tasks)
+    }
+
+    // 4. Jika section Media & Documents di-enable, proses sync file
+    if (isMediaEnabled) {
+      submitProgressText.value = 'Updating media & files...'
+
+      // A. Hapus file yang ditandai untuk dihapus (termasuk replace case study / cover / gallery)
+      if (deletedFileIds.value.length > 0) {
+        submitProgressText.value = 'Cleaning up removed files...'
+        for (const fileId of deletedFileIds.value) {
+          try {
+            await projectApi.deleteProjectFile(projectId, fileId)
+          } catch (delErr) {
+            console.warn(`Failed to delete file ${fileId}`, delErr)
+          }
+        }
+      }
+
+      // B. Upload file Cover baru (jika ada)
+      if (featuredCover.value && !featuredCover.value.isExisting && featuredCover.value.file) {
+        submitProgressText.value = 'Uploading featured cover...'
+        await projectApi.uploadProjectFile(
+          projectId,
+          featuredCover.value.file,
+          'image',
+          'Featured Cover',
+          undefined,
+          0
+        )
+      }
+
+      // C. Upload Gallery baru (jika ada)
+      const newGalleries = galleryFiles.value.filter((g) => !g.isExisting && g.file)
+      if (newGalleries.length > 0) {
+        submitProgressText.value = `Uploading gallery (${newGalleries.length} images)...`
+        for (let i = 0; i < newGalleries.length; i++) {
+          const item = newGalleries[i]
+          if (item?.file) {
+            await projectApi.uploadProjectFile(
+              projectId,
+              item.file,
+              'image',
+              item.title || item.file.name,
+              undefined,
+              i + 1
+            )
+          }
+        }
+      }
+
+      // D. Upload Case Study baru (jika ada)
+      if (caseStudyFile.value && !caseStudyFile.value.isExisting && caseStudyFile.value.file) {
+        submitProgressText.value = 'Uploading case study...'
+        await projectApi.uploadProjectFile(
+          projectId,
+          caseStudyFile.value.file,
+          'case_study',
+          caseStudyFile.value.title || caseStudyFile.value.file.name,
+          undefined,
+          0
+        )
+      }
+
+      // E. Upload Supporting Documents baru (jika ada)
+      const newDocs = supportingDocuments.value.filter((d) => !d.isExisting && d.file)
+      if (newDocs.length > 0) {
+        submitProgressText.value = `Uploading documents (${newDocs.length} files)...`
+        for (let i = 0; i < newDocs.length; i++) {
+          const item = newDocs[i]
+          if (item?.file) {
+            await projectApi.uploadProjectFile(
+              projectId,
+              item.file,
+              'document',
+              item.title || item.file.name,
+              undefined,
+              i
+            )
+          }
+        }
+      }
+
+      // Re-fetch list project agar cover_image dsb terupdate
+      await portfolioStore.fetchProjects()
+    }
 
     // Toast Sukses dengan Progress Bar Hijau Berjalan
     toast.add({
       title: 'Changes Saved',
-      description: 'Portfolio project has been updated successfully.',
+      description: 'Portfolio project and media assets updated successfully.',
       color: 'success'
     })
 
@@ -303,6 +557,7 @@ const handleSave = async () => {
     })
   } finally {
     isSubmitting.value = false
+    submitProgressText.value = ''
   }
 }
 </script>
@@ -1231,7 +1486,7 @@ const handleSave = async () => {
                     v-if="allowEdit['media-documents']"
                     type="button"
                     class="text-slate-400 hover:text-rose-600 cursor-pointer"
-                    @click="caseStudyFile = null"
+                    @click="removeCaseStudy"
                   >
                     <UIcon name="i-lucide-trash-2" class="h-4 w-4" />
                   </button>

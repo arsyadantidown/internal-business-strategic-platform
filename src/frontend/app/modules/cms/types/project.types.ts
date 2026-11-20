@@ -79,3 +79,18 @@ export interface LocalProjectFile {
   sort_order?: number
   previewUrl?: string
 }
+
+// 8. Representasi File yang Ada di Backend
+export interface BackendProjectFileItem {
+  id: string
+  project_id: string
+  file_category: FileCategory
+  file_name: string
+  file_title?: string | null
+  file_description?: string | null
+  mime_type: string
+  file_size_bytes: number
+  file_url?: string | null
+  sort_order: number
+  created_at: string
+}

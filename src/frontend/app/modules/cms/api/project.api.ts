@@ -52,6 +52,31 @@ export const projectApi = {
   },
 
   /**
+   * Delete File dari Project
+   * DELETE /api/v1/projects/{project_id}/files/{file_id}
+   */
+  async deleteProjectFile(projectId: string, fileId: string): Promise<any> {
+    const response = await apiClient.delete(ENDPOINTS.PROJECTS.FILE_DETAIL(projectId, fileId))
+    return response.data
+  },
+
+  /**
+   * Update Metadata File Project (PATCH)
+   * PATCH /api/v1/projects/{project_id}/files/{file_id}
+   */
+  async updateProjectFile(
+    projectId: string,
+    fileId: string,
+    payload: { file_title?: string; file_description?: string; sort_order?: number }
+  ): Promise<any> {
+    const response = await apiClient.patch(
+      ENDPOINTS.PROJECTS.FILE_DETAIL(projectId, fileId),
+      payload
+    )
+    return response.data
+  },
+
+  /**
    * 3. Fetch Master Data Dropdown
    * GET /api/v1/master-data/{data_type}
    */

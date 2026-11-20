@@ -246,6 +246,14 @@ export function useCmsPortfolioForm() {
         form.partners = [{ partner_id: '', partner_role: 'principal', partner_contribution: '' }]
       }
     }
+
+    if (sectionKey === 'media-documents') {
+      if (Array.isArray(originalRawDetail.files)) {
+        form.existing_files = JSON.parse(JSON.stringify(originalRawDetail.files))
+      } else {
+        form.existing_files = []
+      }
+    }
   }
 
   // 5. Siapkan Task Payload Hanya untuk Section yang Di-enable
