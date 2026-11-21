@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
 interface Props {
   overviewText: string
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
+// Menghapus semua tag HTML menggunakan regex
+const plainOverviewText = computed(() => {
+  if (!props.overviewText) return '-'
+  return props.overviewText.replace(/<[^>]*>/g, '').trim()
+})
 </script>
 
 <template>
@@ -16,7 +23,7 @@ defineProps<Props>()
     </div>
 
     <p class="text-xs sm:text-sm leading-relaxed text-slate-600">
-      {{ overviewText }}
+      {{ plainOverviewText }}
     </p>
   </div>
 </template>
