@@ -49,9 +49,13 @@ export interface PortfolioFilterState {
 // --- Tambahan Khusus untuk Halaman Detail ---
 
 export interface ProjectDocument {
+  id?: string
+  projectId?: string
   name: string
   size: string
   date: string
+  fileName?: string
+  mimeType?: string
 }
 
 export interface RelatedPartner {

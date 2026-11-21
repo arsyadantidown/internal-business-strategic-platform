@@ -142,7 +142,11 @@ export const usePortfolioStore = defineStore('portfolio', () => {
     const documents = files
       .filter((f: any) => f.file_category === 'document')
       .map((f: any) => ({
-        name: f.file_title || 'Project Document',
+        id: f.id, // <-- ID file
+        projectId: data.id, // <-- ID project
+        name: f.file_title || f.file_name || 'Project Document',
+        fileName: f.file_name || '',
+        mimeType: f.mime_type || '',
         size: f.file_size ? `${(f.file_size / 1024 / 1024).toFixed(1)} MB` : '-',
         date: formatDate(f.created_at)
       }))

@@ -182,8 +182,10 @@ const handleBack = () => {
         <ProjectLocationCard :location-name="portfolioStore.currentProject.location" />
 
         <!-- Internal Documentation Card -->
-        <ProjectDocumentCard :documents="portfolioStore.currentProject.documents" />
-
+        <ProjectDocumentCard
+          :documents="portfolioStore.currentProject.documents"
+          :project-id="portfolioStore.currentProject.id"
+        />
         <!-- Related Partners Card -->
         <ProjectPartnersCard
           v-if="portfolioStore.currentProject.partners.length > 0"
