@@ -80,6 +80,32 @@ export function useCmsPortfolioAdd() {
     is_featured: false
   })
 
+  // Dynamic item lists untuk Challenges & Solutions
+  const challengesList = ref<string[]>([''])
+  const solutionsList = ref<string[]>([''])
+
+  const addChallengeItem = () => {
+    challengesList.value.push('')
+  }
+  const removeChallengeItem = (index: number) => {
+    if (challengesList.value.length > 1) {
+      challengesList.value.splice(index, 1)
+    } else {
+      challengesList.value[0] = ''
+    }
+  }
+
+  const addSolutionItem = () => {
+    solutionsList.value.push('')
+  }
+  const removeSolutionItem = (index: number) => {
+    if (solutionsList.value.length > 1) {
+      solutionsList.value.splice(index, 1)
+    } else {
+      solutionsList.value[0] = ''
+    }
+  }
+
   // 4. File States (Lokal sebelum di-POST ke backend)
   const featuredCover = ref<LocalProjectFile | null>(null)
   const galleryFiles = ref<LocalProjectFile[]>([])
@@ -252,8 +278,14 @@ export function useCmsPortfolioAdd() {
         project_objective: form.project_objective?.trim() || null,
         project_description: form.project_description?.trim() || null,
         project_background: form.project_background?.trim() || null,
-        project_challenges: form.project_challenges?.trim() || null,
-        project_solution: form.project_solution?.trim() || null,
+        project_challenges: challengesList.value
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join('\n'),
+        project_solution: solutionsList.value
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .join('\n'),
         is_featured: Boolean(form.is_featured),
         customer: {
           customer_name: form.customer.customer_name.trim(),
@@ -404,6 +436,12 @@ export function useCmsPortfolioAdd() {
     supportingDocuments,
 
     // Actions
-    submitProject
+    submitProject,
+    challengesList,
+    solutionsList,
+    addChallengeItem,
+    removeChallengeItem,
+    addSolutionItem,
+    removeSolutionItem
   }
 }

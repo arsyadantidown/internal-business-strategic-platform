@@ -35,7 +35,13 @@ const {
   galleryFiles,
   caseStudyFile,
   supportingDocuments,
-  submitProject
+  submitProject,
+  challengesList,
+  solutionsList,
+  addChallengeItem,
+  removeChallengeItem,
+  addSolutionItem,
+  removeSolutionItem
 } = useCmsPortfolioAdd()
 
 // 7 Section Navigasi
@@ -738,26 +744,74 @@ const selectYear = (yr: number) => {
               />
             </CmsFormField>
 
-            <CmsFormField label="Challenges" html-for="field-chal" full>
-              <textarea
-                id="field-chal"
-                v-model="form.project_challenges"
-                rows="3"
-                placeholder="Technical or operational bottlenecks faced..."
-                class="py-2"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              />
+            <!-- Challenges Dynamic List -->
+            <CmsFormField label="Challenges" full>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] text-slate-400"
+                    >List technical or operational bottlenecks faced</span
+                  >
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 cursor-pointer"
+                    @click="addChallengeItem"
+                  >
+                    <UIcon name="i-lucide-plus" class="h-3.5 w-3.5" />
+                    <span>Add Challenge</span>
+                  </button>
+                </div>
+
+                <div v-for="(_, idx) in challengesList" :key="idx" class="flex items-center gap-2">
+                  <input
+                    v-model="challengesList[idx]"
+                    type="text"
+                    placeholder="e.g. High latency during peak transaction hours"
+                    class="h-9 flex-1 text-xs rounded-lg border border-slate-200 bg-white px-3 focus:border-blue-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+                    @click="removeChallengeItem(idx)"
+                  >
+                    <UIcon name="i-lucide-trash-2" class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </CmsFormField>
 
-            <CmsFormField label="Solution" html-for="field-sol" full>
-              <textarea
-                id="field-sol"
-                v-model="form.project_solution"
-                rows="3"
-                placeholder="How the team designed and implemented the resolution..."
-                class="py-2"
-                :class="[cmsControlClass, cmsControlStateClass(false)]"
-              />
+            <!-- Solution Dynamic List -->
+            <CmsFormField label="Solution" full>
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-[11px] text-slate-400"
+                    >List core implementations and resolution points</span
+                  >
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                    @click="addSolutionItem"
+                  >
+                    <UIcon name="i-lucide-plus" class="h-3.5 w-3.5" />
+                    <span>Add Solution Point</span>
+                  </button>
+                </div>
+
+                <div v-for="(_, idx) in solutionsList" :key="idx" class="flex items-center gap-2">
+                  <input
+                    v-model="solutionsList[idx]"
+                    type="text"
+                    placeholder="e.g. Implemented event-driven microservices architecture"
+                    class="h-9 flex-1 text-xs rounded-lg border border-slate-200 bg-white px-3 focus:border-blue-500 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
+                    @click="removeSolutionItem(idx)"
+                  >
+                    <UIcon name="i-lucide-trash-2" class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </CmsFormField>
 
             <!-- Success Metrics Repeater -->
