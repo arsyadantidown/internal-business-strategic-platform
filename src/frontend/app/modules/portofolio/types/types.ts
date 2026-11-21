@@ -98,6 +98,9 @@ export interface ProjectDetailItem extends ProjectItem {
   documents: ProjectDocument[]
   partners: RelatedPartner[]
   lastUpdated?: string
+  caseStudyUrl?: string | null
+  caseStudyFileId?: string | null
+  caseStudyFileName?: string | null
 }
 
 export type MasterDataType =

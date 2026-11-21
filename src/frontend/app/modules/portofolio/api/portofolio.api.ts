@@ -36,5 +36,23 @@ export const portfolioApi = {
   }> {
     const response = await apiClient.delete(`${ENDPOINTS.PROJECTS.BASE}/${projectId}`)
     return response.data
+  },
+
+  async downloadProjectFile(
+    projectId: string,
+    fileId: string
+  ): Promise<{
+    success: boolean
+    message: string
+    data: {
+      download_url: string
+      expires_in_seconds: number
+      file_name: string
+      mime_type: string
+      file_size_bytes: number
+    }
+  }> {
+    const response = await apiClient.get(ENDPOINTS.PROJECTS.FILE_DOWNLOAD(projectId, fileId))
+    return response.data
   }
 }

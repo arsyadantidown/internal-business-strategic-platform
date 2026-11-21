@@ -146,6 +146,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
         size: f.file_size ? `${(f.file_size / 1024 / 1024).toFixed(1)} MB` : '-',
         date: formatDate(f.created_at)
       }))
+
     // Case Study File (jika ada)
     const caseStudyFile = files.find((f: any) => f.file_category === 'case_study')
     // 5. Challenges & Solutions Parser (bila API mengembalikan string multiline/paragraf)
@@ -221,7 +222,10 @@ export const usePortfolioStore = defineStore('portfolio', () => {
       projectType: data.opportunity || 'Standard Project',
 
       // Tambahan properti caseStudy URL jika ada
-      caseStudyUrl: caseStudyFile?.file_url || null
+      // Tambahan properti caseStudy
+      caseStudyUrl: caseStudyFile?.file_url || null,
+      caseStudyFileId: caseStudyFile?.id || null, // <-- TAMBAHKAN
+      caseStudyFileName: caseStudyFile?.file_title || caseStudyFile?.file_name || null // <-- TAMBAHKAN
     } as ProjectDetailItem
   }
   // Action Fetch Detail
@@ -241,6 +245,26 @@ export const usePortfolioStore = defineStore('portfolio', () => {
       return null
     } finally {
       isDetailLoading.value = false
+    }
+  }
+
+  const isDownloadingCaseStudy = ref(false)
+
+  const downloadCaseStudy = async (projectId: string, fileId: string) => {
+    isDownloadingCaseStudy.value = true
+    try {
+      const response = await portfolioApi.downloadProjectFile(projectId, fileId)
+      if (response.success && response.data?.download_url) {
+        // Buka URL download langsung / trigger download file
+        window.open(response.data.download_url, '_blank')
+        return true
+      }
+      return false
+    } catch (err: any) {
+      console.error('Failed to download case study:', err)
+      throw err
+    } finally {
+      isDownloadingCaseStudy.value = false
     }
   }
 

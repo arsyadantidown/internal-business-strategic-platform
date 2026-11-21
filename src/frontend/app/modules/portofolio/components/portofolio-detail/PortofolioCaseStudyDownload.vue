@@ -1,13 +1,52 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { portfolioApi } from '../../api/portofolio.api'
+
 interface Props {
   title: string
+  projectId?: string
+  fileId?: string | null
+  fileName?: string | null
   fileUrl?: string | null
 }
 
 const props = defineProps<Props>()
+const toast = useToast()
+const isDownloading = ref(false)
 
-const handleDownload = () => {
-  if (props.fileUrl) {
+const handleDownload = async () => {
+  // Jika ada projectId & fileId, gunakan API download resmi yang secure
+  if (props.projectId && props.fileId) {
+    isDownloading.value = true
+    try {
+      const res = await portfolioApi.downloadProjectFile(props.projectId, props.fileId)
+      if (res.success && res.data?.download_url) {
+        // Trigger browser download langsung
+        const link = document.createElement('a')
+        link.href = res.data.download_url
+        link.download = res.data.file_name || 'Case-Study.pdf'
+        link.target = '_blank'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+
+        toast.add({
+          title: 'Download Started',
+          description: `Downloading ${res.data.file_name || 'Case Study'}...`,
+          color: 'success'
+        })
+      }
+    } catch (err: any) {
+      toast.add({
+        title: 'Download Failed',
+        description: err?.response?.data?.message || 'Unable to download case study file.',
+        color: 'error'
+      })
+    } finally {
+      isDownloading.value = false
+    }
+  } else if (props.fileUrl) {
+    // Fallback jika hanya ada fileUrl langsung
     window.open(props.fileUrl, '_blank')
   }
 }
@@ -24,7 +63,7 @@ const handleDownload = () => {
 
     <!-- Jika Ada File Case Study -->
     <div
-      v-if="fileUrl"
+      v-if="fileId || fileUrl"
       class="flex flex-col gap-4 sm:flex-row sm:items-center rounded-xl border border-slate-100 bg-slate-50/50 p-4"
     >
       <div
@@ -34,12 +73,14 @@ const handleDownload = () => {
           <UIcon name="i-lucide-box" class="h-3.5 w-3.5" />
           <span>Case Study</span>
         </div>
-        <p class="text-xs font-bold leading-tight">{{ title }}</p>
+        <p class="text-xs font-bold leading-tight">{{ fileName || title }}</p>
       </div>
 
       <div class="flex-1 space-y-3">
         <div>
-          <h3 class="text-sm font-bold text-slate-900">{{ title }} – Case Study</h3>
+          <h3 class="text-sm font-bold text-slate-900">
+            {{ fileName || `${title} – Case Study` }}
+          </h3>
           <p class="mt-1 text-xs text-slate-500 leading-relaxed">
             Detailed case study covering project background, solution approach, implementation
             process, and business impact.
@@ -48,11 +89,16 @@ const handleDownload = () => {
 
         <button
           type="button"
-          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 cursor-pointer"
+          :disabled="isDownloading"
+          class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-blue-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           @click="handleDownload"
         >
-          <UIcon name="i-lucide-download" class="h-3.5 w-3.5" />
-          <span>Download Case Study</span>
+          <UIcon
+            :name="isDownloading ? 'i-lucide-loader-2' : 'i-lucide-download'"
+            class="h-3.5 w-3.5"
+            :class="{ 'animate-spin': isDownloading }"
+          />
+          <span>{{ isDownloading ? 'Preparing Download...' : 'Download Case Study' }}</span>
         </button>
       </div>
     </div>

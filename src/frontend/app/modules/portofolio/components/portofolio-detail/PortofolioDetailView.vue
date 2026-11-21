@@ -127,6 +127,9 @@ const handleBack = () => {
         <!-- Case Study Download -->
         <PortofolioCaseStudyDownload
           :title="portfolioStore.currentProject.title"
+          :project-id="portfolioStore.currentProject.id"
+          :file-id="(portfolioStore.currentProject as any).caseStudyFileId"
+          :file-name="(portfolioStore.currentProject as any).caseStudyFileName"
           :file-url="(portfolioStore.currentProject as any).caseStudyUrl"
         />
       </div>
