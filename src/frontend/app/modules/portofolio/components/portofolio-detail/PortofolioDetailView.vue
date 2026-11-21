@@ -33,10 +33,6 @@ onMounted(() => {
 const handleBack = () => {
   navigateTo('/portofolio')
 }
-
-const handleEditProject = () => {
-  // Arahkan ke CMS Edit jika ada
-}
 </script>
 
 <template>

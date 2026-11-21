@@ -18,8 +18,8 @@ defineProps<Props>()
 
     <!-- Solution Description & Checklist -->
     <p class="text-xs sm:text-sm text-slate-600 leading-relaxed">
-      We developed a modern, modular digital banking platform with a focus on security, scalability,
-      and user experience. The solution includes:
+      We delivered an end-to-end strategic and technical solution tailored to address core project
+      requirements, drive operational efficiency, and ensure sustainable scalability:
     </p>
 
     <div class="grid grid-cols-1 gap-6 md:grid-cols-12 md:items-center">
@@ -38,9 +38,21 @@ defineProps<Props>()
       <!-- Right: Mockup Illustration Graphic -->
       <div class="flex items-center justify-center md:col-span-4">
         <div
-          class="relative flex h-32 w-full items-center justify-center rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 p-3 shadow-inner"
+          class="group relative h-36 sm:h-40 w-full overflow-hidden rounded-xl border border-slate-200 shadow-xs"
         >
-          <UIcon name="i-lucide-layers" class="h-16 w-16 text-blue-400/80" />
+          <img
+            src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?q=80&w=800&auto=format&fit=crop"
+            alt="Implemented Solution Tech Preview"
+            class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            loading="lazy"
+          />
+          <div
+            class="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-slate-900/10 to-transparent"
+          />
+          <div class="absolute bottom-2.5 left-3 flex items-center gap-1.5 text-white/90">
+            <UIcon name="i-lucide-code-2" class="h-3.5 w-3.5 text-blue-400" />
+            <span class="text-[11px] font-medium tracking-wide">System Implementation</span>
+          </div>
         </div>
       </div>
     </div>
