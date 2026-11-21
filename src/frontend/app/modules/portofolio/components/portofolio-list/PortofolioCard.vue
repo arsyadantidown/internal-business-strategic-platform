@@ -5,7 +5,8 @@ import PortofolioStatusBadge from './PortofolioStatusBadge.vue'
 interface Props {
   project: ProjectItem
 }
-
+const DUMMY_IMAGE =
+  'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop'
 defineProps<Props>()
 
 const emit = defineEmits<{
@@ -20,7 +21,7 @@ const emit = defineEmits<{
     <!-- Card Image Header & Floating Status Badge -->
     <div class="relative h-44 w-full overflow-hidden bg-slate-100">
       <img
-        :src="project.image"
+        :src="project.cover_image_url || DUMMY_IMAGE"
         :alt="project.title"
         class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         loading="lazy"

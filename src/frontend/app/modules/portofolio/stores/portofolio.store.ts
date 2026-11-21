@@ -67,6 +67,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
       technologies: techStacks,
       status: mapStatus(item.project_status?.name),
       year: item.year ? String(item.year) : undefined,
+      cover_image_url: item.cover_image_url || null,
       image: item.cover_image_url || defaultPlaceholder,
       updatedAt: formatRelativeTime(item.updated_at) // <-- Menggunakan dayjs .fromNow()
     }

@@ -24,6 +24,7 @@ export interface ProjectItem {
   status: ProjectStatus
   year?: string
   image: string
+  cover_image_url?: string | null
   updatedAt: string
 }
 
