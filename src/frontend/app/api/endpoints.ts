@@ -33,6 +33,9 @@ export const ENDPOINTS = {
   },
   PROJECTS: {
     BASE: '/api/v1/projects',
+    IMPORT_TEMPLATE: '/api/v1/projects/import/template',
+    IMPORT_PREVIEW: '/api/v1/projects/import/preview',
+    IMPORT_CONFIRM: '/api/v1/projects/import/confirm',
     DETAIL: (projectId: string) => `/api/v1/projects/${projectId}`,
     FILES: (projectId: string) => `/api/v1/projects/${projectId}/files`,
     FILE_DETAIL: (projectId: string, fileId: string) =>

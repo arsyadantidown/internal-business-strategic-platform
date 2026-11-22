@@ -21,6 +21,7 @@ import CmsPortfolioFormModal from '../cms-form/CmsPortfolioFormModal.vue'
 import CmsPartnershipFormModal from '../cms-form/CmsPartnershipFormModal.vue'
 import CmsContentDetailModal from '../cms-detail/CmsContentDetailModal.vue'
 import CmsDeleteDialog from '../cms-delete/CmsDeleteDialog.vue'
+import CmsPortfolioImportModal from '../cms-form/CmsPortfolioImportModal.vue'
 
 interface Props {
   initialKind?: CmsContentKind
@@ -59,6 +60,7 @@ const isDetailOpen = ref(false)
 const isDeleteOpen = ref(false)
 const selectedContent = ref<CmsContent | null>(null)
 const editingContent = ref<CmsContent | null>(null)
+const isImportModalOpen = ref(false)
 
 const editingPortfolio = computed(() =>
   editingContent.value?.kind === 'portfolio' ? editingContent.value : null
@@ -229,8 +231,11 @@ const closePartnershipForm = () => {
 
 <template>
   <div class="space-y-4 pb-8">
-    <CmsPageHeader :kind="activeKind" @add-content="openCreate" />
-
+    <CmsPageHeader
+      :kind="activeKind"
+      @add-content="openCreate"
+      @import-content="isImportModalOpen = true"
+    />
     <CmsStats :stats="stats" />
 
     <CmsRecentActivity :activities="activities" />
@@ -265,6 +270,12 @@ const closePartnershipForm = () => {
       :content="editingPartnership"
       @close="closePartnershipForm"
       @save="handleSavePartnership"
+    />
+    <!-- Modal Import Projects -->
+    <CmsPortfolioImportModal
+      :is-open="isImportModalOpen"
+      @close="isImportModalOpen = false"
+      @success="portfolioStore.fetchProjects()"
     />
 
     <CmsContentDetailModal
