@@ -5,9 +5,12 @@ interface Props {
   currentPage: number
   pageSize: number
   totalItems: number
+  itemLabel?: string
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  itemLabel: 'contents'
+})
 
 const emit = defineEmits<{
   (e: 'update:currentPage' | 'update:pageSize', value: number): void
@@ -61,7 +64,7 @@ const handlePageSize = (event: Event) => {
       <p class="text-[11px] font-medium text-slate-500">
         Showing <span class="font-semibold text-slate-700">{{ startItem }}</span> to
         <span class="font-semibold text-slate-700">{{ endItem }}</span> of
-        <span class="font-semibold text-slate-700">{{ totalItems }}</span> contents
+        <span class="font-semibold text-slate-700">{{ totalItems }}</span> {{ itemLabel }}
       </p>
 
       <div class="flex items-center gap-1.5">
