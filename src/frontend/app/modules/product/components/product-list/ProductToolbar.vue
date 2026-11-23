@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { productStatusOptions } from '../../data/product.data'
-import type { ProductFilters, ProductStatus } from '../../types/product.types'
+import type { ProductFilters, ProductStatusRef } from '../../types/product.types'
 
 interface Props {
   filters: ProductFilters
+  statuses: ProductStatusRef[]
 }
 
 const props = defineProps<Props>()
@@ -14,52 +14,32 @@ const emit = defineEmits<{
   (e: 'reset'): void
 }>()
 
-const search = computed({
-  get: () => props.filters.search,
-  set: value => emit('update', { ...props.filters, search: value })
-})
-
 const status = computed({
-  get: () => props.filters.status,
-  set: value => emit('update', { ...props.filters, status: value as ProductStatus | '' })
+  get: () => props.filters.productStatusId,
+  set: value => emit('update', { productStatusId: value })
 })
 
-const hasActiveFilters = computed(
-  () => props.filters.search.trim() !== '' || props.filters.status !== ''
-)
+const hasActiveFilters = computed(() => props.filters.productStatusId !== '')
 </script>
 
 <template>
   <div class="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
     <div class="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-      <div class="relative w-full sm:w-64">
-        <UIcon
-          name="i-lucide-search"
-          class="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
-        />
-        <input
-          v-model="search"
-          type="text"
-          placeholder="Search by product name or description..."
-          class="h-8.5 w-full rounded-lg border border-slate-200 bg-white pr-3 pl-9 text-xs text-slate-700 shadow-xs transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none"
-        >
-      </div>
-
       <div class="relative">
         <select
           v-model="status"
-          class="h-8.5 w-full cursor-pointer appearance-none rounded-lg border border-slate-200 bg-white py-0 pr-8 pl-3 text-xs font-medium text-slate-700 shadow-xs transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none sm:w-40"
+          class="h-8.5 w-full cursor-pointer appearance-none rounded-lg border border-slate-200 bg-white py-0 pr-8 pl-3 text-xs font-medium text-slate-700 shadow-xs transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none sm:w-52"
           aria-label="Filter by product status"
         >
           <option value="">
             All statuses
           </option>
           <option
-            v-for="option in productStatusOptions"
-            :key="option.value"
-            :value="option.value"
+            v-for="option in statuses"
+            :key="option.id"
+            :value="option.id"
           >
-            {{ option.label }}
+            {{ option.name }}
           </option>
         </select>
         <UIcon

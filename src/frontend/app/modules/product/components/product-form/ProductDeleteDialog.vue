@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { productStatusLabel } from '../../data/product.data'
 import type { ProductItem } from '../../types/product.types'
 
 interface Props {
@@ -14,9 +13,7 @@ const emit = defineEmits<{
   (e: 'close' | 'confirm'): void
 }>()
 
-const statusLabel = computed(() =>
-  props.target ? productStatusLabel(props.target.productStatus) : ''
-)
+const statusLabel = computed(() => props.target?.productStatusName ?? '')
 </script>
 
 <template>

@@ -1,12 +1,13 @@
-import { ENDPOINTS } from '~/api/endpoints'
 import { apiClient } from '~/api/client'
+import { ENDPOINTS } from '~/api/endpoints'
 import type {
+  PartnerCreatePayload,
+  PartnerDeleteResult,
   PartnerDetail,
   PartnerFilters,
-  PartnerFormValues,
   PartnerLegalDocument,
   PartnerListItem,
-  PartnerStatusFilterValue
+  PartnerUpdatePayload
 } from '../types/partner.types'
 
 interface ApiEnvelope<T> {
@@ -15,25 +16,9 @@ interface ApiEnvelope<T> {
   data: T
 }
 
-const PARTNER_EXTENDED_FIELDS_SUPPORTED = false
-
-export const getPartnerErrorMessage = (error: unknown): string => {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { data?: { message?: string } } }).response
-    const message = response?.data?.message
-    if (message) return message
-  }
-
-  if (error instanceof Error && error.message) return error.message
-  return 'Something went wrong. Please try again.'
-}
-
-const isForbiddenError = (error: unknown): boolean => {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { status?: number } }).response
-    return response?.status === 403
-  }
-  return false
+interface PartnerErrorShape {
+  data?: unknown
+  response?: { data?: unknown }
 }
 
 const readText = (value: unknown): string =>
@@ -42,29 +27,8 @@ const readText = (value: unknown): string =>
 const readNullableText = (value: unknown): string | null =>
   typeof value === 'string' && value !== '' ? value : null
 
-const readNumber = (value: unknown): number | null => {
-  if (typeof value === 'number' && Number.isFinite(value)) return value
-  return null
-}
-
-const readBoolean = (value: unknown): boolean | null => {
-  if (typeof value === 'boolean') return value
-  return null
-}
-
-const readCategory = (value: unknown): PartnerListItem['category'] => {
-  if (value === 'technology' || value === 'channel' || value === 'service' || value === 'marketing') {
-    return value
-  }
-  return null
-}
-
-const readLifecycleStatus = (value: unknown): PartnerListItem['lifecycleStatus'] => {
-  if (value === 'draft' || value === 'active' || value === 'under_review' || value === 'expired' || value === 'terminated') {
-    return value
-  }
-  return null
-}
+const readNumber = (value: unknown): number | null =>
+  typeof value === 'number' && Number.isFinite(value) ? value : null
 
 const readStringList = (value: unknown): string[] =>
   Array.isArray(value)
@@ -90,16 +54,15 @@ const readLegalDocuments = (value: unknown): PartnerLegalDocument[] => {
 
 const readProjectStatusName = (value: unknown): string | null => {
   if (typeof value !== 'object' || value === null) return null
-  const record = value as Record<string, unknown>
-  return readNullableText(record.name)
+  return readNullableText((value as Record<string, unknown>).name)
 }
 
 const normalizeListItem = (raw: Record<string, unknown>): PartnerListItem => ({
   id: readText(raw.id),
   partnerName: readText(raw.partner_name),
-  category: readCategory(raw.category),
-  isActive: readBoolean(raw.is_active) ?? true,
-  lifecycleStatus: readLifecycleStatus(raw.status)
+  category: null,
+  isActive: raw.is_active === true,
+  lifecycleStatus: null
 })
 
 const normalizeCooperationProject = (raw: Record<string, unknown>) => ({
@@ -119,15 +82,15 @@ const normalizeCooperationProject = (raw: Record<string, unknown>) => ({
 const normalizeDetail = (raw: Record<string, unknown>): PartnerDetail => ({
   id: readText(raw.id),
   partnerName: readText(raw.partner_name),
-  category: readCategory(raw.category),
-  isActive: readBoolean(raw.is_active) ?? true,
-  lifecycleStatus: readLifecycleStatus(raw.status),
+  category: null,
+  isActive: raw.is_active === true,
+  lifecycleStatus: null,
   profile: {
-    website: readNullableText(raw.website),
-    headquarters: readNullableText(raw.headquarters),
-    industry: readNullableText(raw.industry),
-    businessFocus: readNullableText(raw.business_focus),
-    description: readNullableText(raw.description)
+    website: null,
+    headquarters: null,
+    industry: null,
+    businessFocus: null,
+    description: null
   },
   expertiseAreas: readStringList(raw.expertise_areas),
   capabilities: readStringList(raw.capabilities),
@@ -145,107 +108,50 @@ const readRows = (data: unknown): Record<string, unknown>[] =>
     ? data.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
     : []
 
-const buildCreatePayload = (values: PartnerFormValues): Record<string, unknown> => {
-  const payload: Record<string, unknown> = {
-    partner_name: values.partnerName.trim()
-  }
+const readObject = (data: unknown): Record<string, unknown> =>
+  typeof data === 'object' && data !== null ? data as Record<string, unknown> : {}
 
-  if (PARTNER_EXTENDED_FIELDS_SUPPORTED) {
-    payload.category = values.category || null
-    payload.status = values.status
-    payload.website = values.website.trim() || null
-    payload.headquarters = values.headquarters.trim() || null
-    payload.industry = values.industry.trim() || null
-    payload.business_focus = values.businessFocus.trim() || null
-    payload.description = values.description.trim() || null
-    payload.expertise_areas = values.expertiseAreas
-    payload.capabilities = values.capabilities
-    payload.legal_documents = values.legalDocuments
-      .filter(document => document.documentName.trim() !== '')
-      .map(document => ({
-        document_name: document.documentName.trim(),
-        document_type: document.documentType,
-        document_number: document.documentNumber.trim() || null,
-        issued_at: document.issuedAt || null,
-        expires_at: document.expiresAt || null
-      }))
+const readMessageList = (value: unknown): string[] => {
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.flatMap(item => readMessageList(item))
+  if (typeof value === 'object' && value !== null) {
+    return Object.entries(value).flatMap(([field, item]) =>
+      readMessageList(item).map(message => `${field}: ${message}`)
+    )
   }
-
-  return payload
+  return []
 }
 
-const buildUpdateChanges = (
-  detail: PartnerDetail,
-  values: PartnerFormValues
-): Record<string, unknown> => {
-  const changes: Record<string, unknown> = {}
+const readErrorData = (error: unknown): Record<string, unknown> | null => {
+  if (typeof error !== 'object' || error === null) return null
+  const source = error as PartnerErrorShape
+  const data = source.response?.data ?? source.data
+  return typeof data === 'object' && data !== null ? data as Record<string, unknown> : null
+}
 
-  if (values.partnerName.trim() !== detail.partnerName) {
-    changes.partner_name = values.partnerName.trim()
+export const getPartnerErrorMessage = (error: unknown): string => {
+  const data = readErrorData(error)
+
+  if (data) {
+    const message = data.message ?? data.detail
+    if (typeof message === 'string' && message) return message
+
+    const fieldMessages = readMessageList(data.errors)
+    if (fieldMessages.length) return fieldMessages.join(' ')
   }
 
-  if (PARTNER_EXTENDED_FIELDS_SUPPORTED) {
-    if ((values.category || null) !== detail.category) {
-      changes.category = values.category || null
-    }
-    if (values.status !== (detail.lifecycleStatus ?? 'draft')) {
-      changes.status = values.status
-    }
-    if ((values.website.trim() || null) !== detail.profile.website) {
-      changes.website = values.website.trim() || null
-    }
-    if ((values.headquarters.trim() || null) !== detail.profile.headquarters) {
-      changes.headquarters = values.headquarters.trim() || null
-    }
-    if ((values.industry.trim() || null) !== detail.profile.industry) {
-      changes.industry = values.industry.trim() || null
-    }
-    if ((values.businessFocus.trim() || null) !== detail.profile.businessFocus) {
-      changes.business_focus = values.businessFocus.trim() || null
-    }
-    if ((values.description.trim() || null) !== detail.profile.description) {
-      changes.description = values.description.trim() || null
-    }
-    changes.expertise_areas = values.expertiseAreas
-    changes.capabilities = values.capabilities
-    changes.legal_documents = values.legalDocuments
-      .filter(document => document.documentName.trim() !== '')
-      .map(document => ({
-        document_name: document.documentName.trim(),
-        document_type: document.documentType,
-        document_number: document.documentNumber.trim() || null,
-        issued_at: document.issuedAt || null,
-        expires_at: document.expiresAt || null
-      }))
-  } else {
-    const nextActive = values.status === 'active'
-    if (nextActive !== detail.isActive) {
-      changes.is_active = nextActive
-    }
-  }
-
-  return changes
+  if (error instanceof Error && error.message) return error.message
+  return 'Something went wrong. Please try again.'
 }
 
 export const partnerApi = {
   async list(filters: PartnerFilters): Promise<PartnerListItem[]> {
     const params: Record<string, string | boolean> = {}
-    const search = filters.search.trim()
+    const search = filters.search.trim().slice(0, 200)
     if (search) params.search = search
+    params.include_inactive = filters.includeInactive
 
-    let response
-
-    try {
-      response = await apiClient.get<ApiEnvelope<unknown>>(ENDPOINTS.PARTNERS.BASE, {
-        params: { ...params, include_inactive: true }
-      })
-    } catch (error) {
-      if (isForbiddenError(error)) {
-        response = await apiClient.get<ApiEnvelope<unknown>>(ENDPOINTS.PARTNERS.BASE, { params })
-      } else {
-        throw error
-      }
-    }
+    const response = await apiClient.get<ApiEnvelope<unknown>>(ENDPOINTS.PARTNERS.BASE, { params })
 
     return readRows(response.data?.data)
       .map(normalizeListItem)
@@ -257,64 +163,41 @@ export const partnerApi = {
       `${ENDPOINTS.PARTNERS.BASE}/${partnerId}`
     )
 
-    const raw = typeof response.data?.data === 'object' && response.data.data !== null
-      ? response.data.data as Record<string, unknown>
-      : {}
-
-    return normalizeDetail(raw)
+    return normalizeDetail(readObject(response.data?.data))
   },
 
-  async create(values: PartnerFormValues): Promise<{ message: string, id: string }> {
+  async create(payload: PartnerCreatePayload): Promise<PartnerListItem> {
     const response = await apiClient.post<ApiEnvelope<Record<string, unknown>>>(
       ENDPOINTS.PARTNERS.BASE,
-      buildCreatePayload(values)
+      payload
     )
 
-    const raw = typeof response.data?.data === 'object' && response.data.data !== null
-      ? response.data.data as Record<string, unknown>
-      : {}
+    return normalizeListItem(readObject(response.data?.data))
+  },
 
-    const id = readText(raw.id)
+  async update(partnerId: string, payload: PartnerUpdatePayload): Promise<PartnerListItem> {
+    const response = await apiClient.patch<ApiEnvelope<Record<string, unknown>>>(
+      `${ENDPOINTS.PARTNERS.BASE}/${partnerId}`,
+      payload
+    )
 
-    if (id !== '' && !PARTNER_EXTENDED_FIELDS_SUPPORTED && values.status !== 'active') {
-      await apiClient.patch<ApiEnvelope<Record<string, unknown>>>(
-        `${ENDPOINTS.PARTNERS.BASE}/${id}`,
-        { is_active: false }
-      )
+    return normalizeListItem(readObject(response.data?.data))
+  },
+
+  async setActive(partnerId: string, isActive: boolean): Promise<PartnerListItem> {
+    return partnerApi.update(partnerId, { is_active: isActive })
+  },
+
+  async delete(partnerId: string): Promise<PartnerDeleteResult> {
+    const response = await apiClient.delete<ApiEnvelope<Record<string, unknown>>>(
+      `${ENDPOINTS.PARTNERS.BASE}/${partnerId}`
+    )
+    const raw = readObject(response.data?.data)
+
+    return {
+      id: readText(raw.id) || partnerId,
+      deleted: raw.deleted === true,
+      is_active: typeof raw.is_active === 'boolean' ? raw.is_active : undefined
     }
-
-    return { message: readText(response.data?.message), id }
-  },
-
-  async update(
-    partnerId: string,
-    detail: PartnerDetail,
-    values: PartnerFormValues
-  ): Promise<{ message: string }> {
-    const response = await apiClient.patch<ApiEnvelope<Record<string, unknown>>>(
-      `${ENDPOINTS.PARTNERS.BASE}/${partnerId}`,
-      buildUpdateChanges(detail, values)
-    )
-
-    return { message: readText(response.data?.message) }
-  },
-
-  async setActive(partnerId: string, isActive: boolean): Promise<{ message: string }> {
-    const response = await apiClient.patch<ApiEnvelope<Record<string, unknown>>>(
-      `${ENDPOINTS.PARTNERS.BASE}/${partnerId}`,
-      { is_active: isActive }
-    )
-
-    return { message: readText(response.data?.message) }
-  },
-
-  getUpdateChanges: buildUpdateChanges,
-
-  applyStatusFilter(
-    items: PartnerListItem[],
-    status: PartnerStatusFilterValue
-  ): PartnerListItem[] {
-    if (status === '') return items
-    return items.filter(item => (status === 'active') === item.isActive)
   }
 }

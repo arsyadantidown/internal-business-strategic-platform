@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { getPartnerErrorMessage, partnerApi } from '../../api/partner.api'
-import type { PartnerDetail } from '../../types/partner.types'
+import { storeToRefs } from 'pinia'
+import { getPartnerErrorMessage } from '../../api/partner.api'
+import { usePartnerStore } from '../../stores/partner.store'
 import PartnerDetailCooperation from './PartnerDetailCooperation.vue'
 import PartnerDetailDocuments from './PartnerDetailDocuments.vue'
 import PartnerDetailExpertise from './PartnerDetailExpertise.vue'
@@ -20,31 +21,16 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const partnerStore = usePartnerStore()
+const {
+  detail,
+  isDetailLoading: isLoading,
+  detailError: loadError
+} = storeToRefs(partnerStore)
 
-const detail = ref<PartnerDetail | null>(null)
-const isLoading = ref(true)
-const loadError = ref('')
 const isTogglingActive = ref(false)
 
-let fetchToken = 0
-
-const fetchDetail = async () => {
-  const token = ++fetchToken
-  isLoading.value = true
-  loadError.value = ''
-
-  try {
-    const result = await partnerApi.getDetail(props.partnerId)
-    if (token === fetchToken) detail.value = result
-  } catch (error) {
-    if (token === fetchToken) {
-      loadError.value = getPartnerErrorMessage(error)
-      detail.value = null
-    }
-  } finally {
-    if (token === fetchToken) isLoading.value = false
-  }
-}
+const fetchDetail = () => partnerStore.fetchPartnerDetail(props.partnerId)
 
 const toggleActive = async () => {
   if (!detail.value || isTogglingActive.value) return
@@ -53,9 +39,7 @@ const toggleActive = async () => {
 
   try {
     const nextActive = !detail.value.isActive
-    await partnerApi.setActive(props.partnerId, nextActive)
-
-    detail.value = { ...detail.value, isActive: nextActive }
+    await partnerStore.setPartnerActive(props.partnerId, nextActive)
 
     toast.add({
       title: nextActive ? 'Partner activated' : 'Partner deactivated',

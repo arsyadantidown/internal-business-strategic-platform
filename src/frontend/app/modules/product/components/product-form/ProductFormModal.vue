@@ -3,17 +3,17 @@ import { computed, reactive, ref, watch } from 'vue'
 import CmsFormField from '~/modules/cms/components/cms-form/CmsFormField.vue'
 import CmsFormSection from '~/modules/cms/components/cms-form/CmsFormSection.vue'
 import { cmsControlClass, cmsControlStateClass } from '~/modules/cms/utils/cmsForm'
-import { productStatusOptions } from '../../data/product.data'
 import type {
   ProductFormErrors,
   ProductFormValues,
   ProductItem,
-  ProductStatus
+  ProductStatusRef
 } from '../../types/product.types'
 
 interface Props {
   isOpen: boolean
   editingItem: ProductItem | null
+  statuses: ProductStatusRef[]
 }
 
 const props = defineProps<Props>()
@@ -28,11 +28,11 @@ const isEditMode = computed(() => props.editingItem !== null)
 const form = reactive<{
   productName: string
   productDescription: string
-  productStatus: ProductStatus
+  productStatusId: string
 }>({
   productName: '',
   productDescription: '',
-  productStatus: 'active'
+  productStatusId: ''
 })
 
 const errors = ref<ProductFormErrors>({})
@@ -52,8 +52,8 @@ const validate = (): ProductFormValues | null => {
     next.productDescription = 'Product description must be at most 500 characters.'
   }
 
-  if (!form.productStatus) {
-    next.productStatus = 'Product status is required.'
+  if (!form.productStatusId) {
+    next.productStatusId = 'Product status is required.'
   }
 
   errors.value = next
@@ -63,7 +63,7 @@ const validate = (): ProductFormValues | null => {
   return {
     productName,
     productDescription,
-    productStatus: form.productStatus
+    productStatusId: form.productStatusId
   }
 }
 
@@ -82,16 +82,10 @@ watch(
     if (!isOpen) return
 
     errors.value = {}
-
-    if (props.editingItem) {
-      form.productName = props.editingItem.productName
-      form.productDescription = props.editingItem.productDescription
-      form.productStatus = props.editingItem.productStatus
-    } else {
-      form.productName = ''
-      form.productDescription = ''
-      form.productStatus = 'active'
-    }
+    form.productName = props.editingItem?.productName ?? ''
+    form.productDescription = props.editingItem?.productDescription ?? ''
+    form.productStatusId
+      = props.editingItem?.productStatusId ?? props.statuses[0]?.id ?? ''
   }
 )
 </script>
@@ -170,20 +164,26 @@ watch(
               label="Product Status"
               html-for="product-status"
               required
-              :error="errors.productStatus"
+              :error="errors.productStatusId"
               hint="Controls availability across project forms."
             >
               <select
                 id="product-status"
-                v-model="form.productStatus"
-                :class="[cmsControlClass, cmsControlStateClass(!!errors.productStatus)]"
+                v-model="form.productStatusId"
+                :class="[cmsControlClass, cmsControlStateClass(!!errors.productStatusId)]"
               >
                 <option
-                  v-for="option in productStatusOptions"
-                  :key="option.value"
-                  :value="option.value"
+                  value=""
+                  disabled
                 >
-                  {{ option.label }}
+                  Select product status
+                </option>
+                <option
+                  v-for="status in statuses"
+                  :key="status.id"
+                  :value="status.id"
+                >
+                  {{ status.name }}
                 </option>
               </select>
             </CmsFormField>

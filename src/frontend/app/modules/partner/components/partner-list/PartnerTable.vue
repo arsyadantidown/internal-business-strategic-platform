@@ -14,7 +14,7 @@ interface Props {
 defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'view' | 'edit', item: PartnerListItem): void
+  (e: 'view' | 'edit' | 'delete', item: PartnerListItem): void
   (e: 'retry' | 'add'): void
 }>()
 
@@ -124,6 +124,30 @@ const initialsOf = (name: string): string =>
           </tr>
         </tbody>
 
+        <tbody v-else-if="items.length === 0 && isFilterDirty">
+          <tr>
+            <td
+              colspan="4"
+              class="px-4 py-10"
+            >
+              <div class="flex flex-col items-center gap-2.5 text-center">
+                <UIcon
+                  name="i-lucide-search-x"
+                  class="h-8 w-8 text-slate-300"
+                />
+                <div>
+                  <p class="text-xs font-semibold text-slate-700">
+                    No partners match your filters
+                  </p>
+                  <p class="mt-0.5 text-[11px] text-slate-500">
+                    Try adjusting your search or filter criteria.
+                  </p>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+
         <tbody v-else-if="totalCount === 0">
           <tr>
             <td
@@ -154,30 +178,6 @@ const initialsOf = (name: string): string =>
                   />
                   <span>Add Partner</span>
                 </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-
-        <tbody v-else-if="items.length === 0">
-          <tr>
-            <td
-              colspan="4"
-              class="px-4 py-10"
-            >
-              <div class="flex flex-col items-center gap-2.5 text-center">
-                <UIcon
-                  name="i-lucide-search-x"
-                  class="h-8 w-8 text-slate-300"
-                />
-                <div>
-                  <p class="text-xs font-semibold text-slate-700">
-                    No partners match your filters
-                  </p>
-                  <p class="mt-0.5 text-[11px] text-slate-500">
-                    Try adjusting your search or filter criteria.
-                  </p>
-                </div>
               </div>
             </td>
           </tr>
@@ -236,6 +236,18 @@ const initialsOf = (name: string): string =>
                 >
                   <UIcon
                     name="i-lucide-pencil"
+                    class="h-3.5 w-3.5"
+                  />
+                </button>
+
+                <button
+                  type="button"
+                  class="inline-flex h-6.5 w-6.5 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
+                  title="Delete partner"
+                  @click="emit('delete', item)"
+                >
+                  <UIcon
+                    name="i-lucide-trash-2"
                     class="h-3.5 w-3.5"
                   />
                 </button>

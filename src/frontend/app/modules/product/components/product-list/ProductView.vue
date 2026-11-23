@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import CmsPagination from '~/modules/cms/components/cms-list/CmsPagination.vue'
 import ProductPageHeader from './ProductPageHeader.vue'
 import ProductStats from './ProductStats.vue'
@@ -7,27 +7,11 @@ import ProductTable from './ProductTable.vue'
 import ProductToolbar from './ProductToolbar.vue'
 import ProductFormModal from '../product-form/ProductFormModal.vue'
 import ProductDeleteDialog from '../product-form/ProductDeleteDialog.vue'
-import { useProducts } from '../../composables/useProducts'
+import { useProductStore } from '../../stores/product.store'
 import type { ProductFormValues, ProductItem } from '../../types/product.types'
 
 const toast = useToast()
-
-const {
-  items,
-  filters,
-  currentPage,
-  pageSize,
-  paginatedItems,
-  totalResults,
-  statusCount,
-  setFilters,
-  resetFilters,
-  setPage,
-  setPageSize,
-  createItem,
-  updateItem,
-  deleteItem
-} = useProducts()
+const productStore = useProductStore()
 
 const isFormOpen = ref(false)
 const editingItem = ref<ProductItem | null>(null)
@@ -48,24 +32,34 @@ const closeForm = () => {
   editingItem.value = null
 }
 
-const handleFormSubmit = (values: ProductFormValues) => {
-  if (editingItem.value) {
-    updateItem(editingItem.value, values)
+const handleFormSubmit = async (values: ProductFormValues) => {
+  if (productStore.isSubmitting) return
+
+  try {
+    if (editingItem.value) {
+      await productStore.updateProduct(editingItem.value, values)
+      toast.add({
+        title: 'Product updated',
+        description: `"${values.productName}" has been updated successfully.`,
+        color: 'success'
+      })
+    } else {
+      await productStore.createProduct(values)
+      toast.add({
+        title: 'Product added',
+        description: `"${values.productName}" has been added to the product catalog.`,
+        color: 'success'
+      })
+    }
+
+    closeForm()
+  } catch (error) {
     toast.add({
-      title: 'Product updated',
-      description: `"${values.productName}" has been updated successfully.`,
-      color: 'success'
-    })
-  } else {
-    createItem(values)
-    toast.add({
-      title: 'Product added',
-      description: `"${values.productName}" has been added to the product catalog.`,
-      color: 'success'
+      title: 'Action failed',
+      description: error instanceof Error ? error.message : 'Something went wrong.',
+      color: 'error'
     })
   }
-
-  closeForm()
 }
 
 const openDeleteDialog = (item: ProductItem) => {
@@ -76,18 +70,31 @@ const closeDeleteDialog = () => {
   deleteTarget.value = null
 }
 
-const handleDeleteConfirm = () => {
+const handleDeleteConfirm = async () => {
   const target = deleteTarget.value
-  if (!target) return
+  if (!target || productStore.isSubmitting) return
 
-  deleteItem(target)
-  toast.add({
-    title: 'Product deleted',
-    description: `"${target.productName}" has been removed from the product catalog.`,
-    color: 'success'
-  })
-  closeDeleteDialog()
+  try {
+    await productStore.deleteProduct(target)
+    toast.add({
+      title: 'Product deleted',
+      description: `"${target.productName}" has been removed from the product catalog.`,
+      color: 'success'
+    })
+    closeDeleteDialog()
+  } catch (error) {
+    toast.add({
+      title: 'Delete failed',
+      description: error instanceof Error ? error.message : 'Failed to delete product.',
+      color: 'error'
+    })
+  }
 }
+
+onMounted(async () => {
+  await productStore.fetchStatuses()
+  await productStore.fetchProducts()
+})
 </script>
 
 <template>
@@ -95,40 +102,45 @@ const handleDeleteConfirm = () => {
     <ProductPageHeader @add="openCreateForm" />
 
     <ProductStats
-      :total="items.length"
-      :active="statusCount('active')"
-      :draft="statusCount('draft')"
-      :inactive="statusCount('inactive')"
+      :total="productStore.totalCount"
+      :active="productStore.statusCount('active')"
+      :draft="productStore.statusCount('draft')"
+      :inactive="productStore.statusCount('inactive')"
     />
 
     <ProductToolbar
-      :filters="filters"
-      @update="setFilters"
-      @reset="resetFilters"
+      :filters="productStore.filters"
+      :statuses="productStore.statuses"
+      @update="productStore.setFilters"
+      @reset="productStore.resetFilters"
     />
 
     <ProductTable
-      :items="paginatedItems"
-      :total-count="items.length"
-      :total-results="totalResults"
+      :items="productStore.paginatedItems"
+      :is-loading="productStore.isLoading"
+      :load-error="productStore.errorMessage ?? ''"
+      :total-count="productStore.totalCount"
+      :total-results="productStore.totalResults"
       @add="openCreateForm"
       @edit="openEditForm"
       @delete="openDeleteDialog"
+      @retry="productStore.fetchProducts"
     />
 
     <CmsPagination
-      v-if="totalResults > 0"
-      :current-page="currentPage"
-      :page-size="pageSize"
-      :total-items="totalResults"
+      v-if="productStore.totalResults > 0"
+      :current-page="productStore.currentPage"
+      :page-size="productStore.pageSize"
+      :total-items="productStore.totalResults"
       item-label="products"
-      @update:current-page="setPage"
-      @update:page-size="setPageSize"
+      @update:current-page="productStore.setPage"
+      @update:page-size="productStore.setPageSize"
     />
 
     <ProductFormModal
       :is-open="isFormOpen"
       :editing-item="editingItem"
+      :statuses="productStore.statuses"
       @close="closeForm"
       @submit="handleFormSubmit"
     />

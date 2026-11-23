@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { productStatusLabel } from '../../data/product.data'
 import type { ProductStatus } from '../../types/product.types'
 
 interface Props {
   status: ProductStatus
+  label: string
 }
 
 const props = defineProps<Props>()
@@ -31,6 +31,6 @@ const dotClasses = computed(() => {
       class="h-1.5 w-1.5 rounded-full"
       :class="dotClasses"
     />
-    {{ productStatusLabel(status) }}
+    {{ label }}
   </span>
 </template>
