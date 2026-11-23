@@ -16,6 +16,11 @@ interface ApiEnvelope<T> {
   data: T
 }
 
+interface PartnerErrorShape {
+  data?: unknown
+  response?: { data?: unknown }
+}
+
 const readText = (value: unknown): string =>
   typeof value === 'string' ? value : ''
 
@@ -106,11 +111,33 @@ const readRows = (data: unknown): Record<string, unknown>[] =>
 const readObject = (data: unknown): Record<string, unknown> =>
   typeof data === 'object' && data !== null ? data as Record<string, unknown> : {}
 
+const readMessageList = (value: unknown): string[] => {
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.flatMap(item => readMessageList(item))
+  if (typeof value === 'object' && value !== null) {
+    return Object.entries(value).flatMap(([field, item]) =>
+      readMessageList(item).map(message => `${field}: ${message}`)
+    )
+  }
+  return []
+}
+
+const readErrorData = (error: unknown): Record<string, unknown> | null => {
+  if (typeof error !== 'object' || error === null) return null
+  const source = error as PartnerErrorShape
+  const data = source.response?.data ?? source.data
+  return typeof data === 'object' && data !== null ? data as Record<string, unknown> : null
+}
+
 export const getPartnerErrorMessage = (error: unknown): string => {
-  if (typeof error === 'object' && error !== null && 'response' in error) {
-    const response = (error as { response?: { data?: { message?: string } } }).response
-    const message = response?.data?.message
-    if (message) return message
+  const data = readErrorData(error)
+
+  if (data) {
+    const message = data.message ?? data.detail
+    if (typeof message === 'string' && message) return message
+
+    const fieldMessages = readMessageList(data.errors)
+    if (fieldMessages.length) return fieldMessages.join(' ')
   }
 
   if (error instanceof Error && error.message) return error.message

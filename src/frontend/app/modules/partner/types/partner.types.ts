@@ -169,26 +169,6 @@ export interface PartnerFilters {
   includeInactive: boolean
 }
 
-export interface PartnerLegalDocumentFormValue {
-  documentName: string
-  documentType: string
-  documentNumber: string
-  issuedAt: string
-  expiresAt: string
-}
-
 export interface PartnerFormValues {
   partnerName: string
-  category: PartnerCategoryValue | ''
-  status: PartnerLifecycleStatusValue
-  website: string
-  headquarters: string
-  industry: string
-  businessFocus: string
-  description: string
-  expertiseAreas: string[]
-  capabilities: string[]
-  legalDocuments: PartnerLegalDocumentFormValue[]
 }
-
-export type PartnerFormErrors = Record<string, string | undefined>

@@ -84,9 +84,6 @@ export const usePartnerStore = defineStore('partner', () => {
 
     if (name !== current.partnerName) changes.partner_name = name
 
-    const nextActive = values.status === 'active'
-    if (nextActive !== current.isActive) changes.is_active = nextActive
-
     return changes
   }
 
@@ -95,10 +92,6 @@ export const usePartnerStore = defineStore('partner', () => {
     errorMessage.value = null
     try {
       const created = await partnerApi.create({ partner_name: values.partnerName.trim() })
-      if (values.status !== 'active') {
-        const deactivated = await partnerApi.setActive(created.id, false)
-        created.isActive = deactivated.isActive
-      }
       await fetchPartners()
       return created
     } catch (error) {
@@ -125,8 +118,7 @@ export const usePartnerStore = defineStore('partner', () => {
       if (detail.value?.id === partnerId) {
         detail.value = {
           ...detail.value,
-          partnerName: updated.partnerName,
-          isActive: updated.isActive
+          partnerName: updated.partnerName
         }
       }
       await fetchPartners()
