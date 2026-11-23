@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { cmsControlClass, cmsControlStateClass } from '~/modules/cms/utils/cmsForm'
-import { getPartnerErrorMessage, partnerApi } from '../../api/partner.api'
+import { getPartnerErrorMessage } from '../../api/partner.api'
+import { usePartnerStore } from '../../stores/partner.store'
 import type {
   PartnerCategoryValue,
   PartnerDetail,
@@ -23,6 +24,7 @@ const emit = defineEmits<{
 }>()
 
 const toast = useToast()
+const partnerStore = usePartnerStore()
 
 const isEditMode = computed(() => props.editingId !== null)
 
@@ -97,9 +99,13 @@ const prepareForm = async () => {
 
   try {
     if (props.editingId) {
-      const loaded = await partnerApi.getDetail(props.editingId)
-      detail.value = loaded
-      applyDetail(loaded)
+      const loaded = await partnerStore.fetchPartnerDetail(props.editingId)
+      if (loaded) {
+        detail.value = loaded
+        applyDetail(loaded)
+      } else {
+        prepareError.value = partnerStore.detailError || 'Failed to load partner detail.'
+      }
     }
   } catch (error) {
     prepareError.value = getPartnerErrorMessage(error)
@@ -237,7 +243,7 @@ const handleSubmit = async () => {
 
   try {
     if (isEditMode.value && props.editingId && detail.value) {
-      const changes = partnerApi.getUpdateChanges(detail.value, form)
+      const changes = partnerStore.getUpdateChanges(detail.value, form)
 
       if (Object.keys(changes).length === 0) {
         toast.add({
@@ -248,7 +254,7 @@ const handleSubmit = async () => {
         return
       }
 
-      await partnerApi.update(props.editingId, detail.value, form)
+      await partnerStore.updatePartner(props.editingId, detail.value, form)
 
       toast.add({
         title: 'Partner updated',
@@ -256,7 +262,7 @@ const handleSubmit = async () => {
         color: 'success'
       })
     } else {
-      await partnerApi.create(form)
+      await partnerStore.createPartner(form)
 
       toast.add({
         title: 'Partner added',

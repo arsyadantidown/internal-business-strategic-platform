@@ -4,6 +4,8 @@ import ProductStatusBadge from './ProductStatusBadge.vue'
 
 interface Props {
   items: ProductItem[]
+  isLoading: boolean
+  loadError: string
   totalCount: number
   totalResults: number
 }
@@ -11,7 +13,7 @@ interface Props {
 defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'add'): void
+  (e: 'add' | 'retry'): void
   (e: 'edit' | 'delete', item: ProductItem): void
 }>()
 </script>
@@ -52,7 +54,69 @@ const emit = defineEmits<{
         </thead>
 
         <tbody
-          v-if="items.length === 0"
+          v-if="isLoading"
+          class="divide-y divide-slate-100"
+        >
+          <tr
+            v-for="row in 5"
+            :key="row"
+            class="animate-pulse"
+          >
+            <td class="px-4 py-3">
+              <div class="h-3.5 w-36 rounded-full bg-slate-100" />
+            </td>
+            <td class="px-4 py-3">
+              <div class="h-3.5 w-64 rounded-full bg-slate-100" />
+            </td>
+            <td class="px-4 py-3">
+              <div class="h-5 w-20 rounded-full bg-slate-100" />
+            </td>
+            <td class="px-4 py-3 text-right">
+              <div class="inline-flex h-6 w-14 rounded-md bg-slate-100" />
+            </td>
+          </tr>
+        </tbody>
+
+        <tbody
+          v-else-if="loadError"
+          class="divide-y divide-slate-100"
+        >
+          <tr>
+            <td
+              colspan="4"
+              class="px-4 py-8"
+            >
+              <div class="flex flex-col items-center gap-2 text-center">
+                <UIcon
+                  name="i-lucide-alert-triangle"
+                  class="h-7 w-7 text-amber-500"
+                />
+                <div>
+                  <p class="text-xs font-semibold text-slate-800">
+                    Failed to load products
+                  </p>
+                  <p class="mt-0.5 max-w-md text-[11px] text-slate-500">
+                    {{ loadError }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  class="mt-1 inline-flex h-8.5 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-xs transition-all hover:bg-slate-50 cursor-pointer"
+                  @click="emit('retry')"
+                >
+                  <UIcon
+                    name="i-lucide-rotate-ccw"
+                    class="h-3.5 w-3.5"
+                  />
+                  <span>Retry</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+
+        <tbody
+          v-else-if="items.length === 0"
           class="divide-y divide-slate-100"
         >
           <tr>
@@ -62,18 +126,18 @@ const emit = defineEmits<{
             >
               <div class="flex flex-col items-center gap-2.5 text-center">
                 <UIcon
-                  :name="totalCount === 0 ? 'i-lucide-package-open' : 'i-lucide-search-x'"
+                  name="i-lucide-package-open"
                   class="h-8 w-8 text-slate-300"
                 />
                 <div>
                   <p class="text-xs font-semibold text-slate-700">
-                    {{ totalCount === 0 ? 'No products yet' : 'No matching products' }}
+                    No products found
                   </p>
                   <p class="mt-0.5 text-[11px] text-slate-500">
                     {{
                       totalCount === 0
                         ? 'Get started by adding your first product.'
-                        : 'Try adjusting your search or status filter.'
+                        : 'Change the status filter to see other products.'
                     }}
                   </p>
                 </div>
@@ -127,7 +191,10 @@ const emit = defineEmits<{
             </td>
 
             <td class="px-4 py-3">
-              <ProductStatusBadge :status="item.productStatus" />
+              <ProductStatusBadge
+                :status="item.productStatus"
+                :label="item.productStatusName"
+              />
             </td>
 
             <td class="px-4 py-3">

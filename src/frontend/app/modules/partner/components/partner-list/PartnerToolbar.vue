@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { PARTNER_CATEGORIES } from '../../types/partner.types'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import type { PartnerFilters } from '../../types/partner.types'
 
 interface Props {
@@ -15,20 +14,39 @@ const emit = defineEmits<{
   (e: 'reset'): void
 }>()
 
-const search = computed({
-  get: () => props.filters.search,
-  set: value => emit('update', { ...props.filters, search: value })
+const searchInput = ref(props.filters.search)
+let debounceTimer: ReturnType<typeof setTimeout> | undefined
+
+watch(searchInput, (value) => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    emit('update', { ...props.filters, search: value.slice(0, 200) })
+  }, 350)
 })
 
-const category = computed({
-  get: () => props.filters.category,
-  set: value => emit('update', { ...props.filters, category: value })
+watch(
+  () => props.filters.search,
+  (value) => {
+    if (value !== searchInput.value) searchInput.value = value
+  }
+)
+
+onBeforeUnmount(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
 })
 
-const status = computed({
-  get: () => props.filters.status,
-  set: value => emit('update', { ...props.filters, status: value })
-})
+const handleIncludeInactiveChange = (event: Event) => {
+  emit('update', {
+    ...props.filters,
+    includeInactive: (event.target as HTMLInputElement).checked
+  })
+}
+
+const handleReset = () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  searchInput.value = ''
+  emit('reset')
+}
 </script>
 
 <template>
@@ -40,62 +58,30 @@ const status = computed({
           class="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
         />
         <input
-          v-model="search"
+          v-model="searchInput"
           type="text"
+          maxlength="200"
           placeholder="Search partner name..."
           class="h-8.5 w-full rounded-lg border border-slate-200 bg-white pr-3 pl-9 text-xs text-slate-700 shadow-xs transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none"
         >
       </div>
 
-      <div class="relative">
-        <select
-          v-model="category"
-          class="h-8.5 w-full cursor-pointer appearance-none rounded-lg border border-slate-200 bg-white py-0 pr-8 pl-3 text-xs font-medium text-slate-700 shadow-xs transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none md:w-48"
+      <label class="inline-flex h-8.5 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 shadow-xs transition-colors hover:bg-slate-50">
+        <input
+          type="checkbox"
+          class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500/50"
+          :checked="filters.includeInactive"
+          @change="handleIncludeInactiveChange"
         >
-          <option value="">
-            All categories
-          </option>
-          <option
-            v-for="option in PARTNER_CATEGORIES"
-            :key="option.value"
-            :value="option.value"
-          >
-            {{ option.label }}
-          </option>
-        </select>
-        <UIcon
-          name="i-lucide-chevron-right"
-          class="pointer-events-none absolute top-1/2 right-2.5 h-3 w-3 -translate-y-1/2 rotate-90 text-slate-400"
-        />
-      </div>
-
-      <div class="relative">
-        <select
-          v-model="status"
-          class="h-8.5 w-full cursor-pointer appearance-none rounded-lg border border-slate-200 bg-white py-0 pr-8 pl-3 text-xs font-medium text-slate-700 shadow-xs transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none md:w-40"
-        >
-          <option value="">
-            All statuses
-          </option>
-          <option value="active">
-            Active
-          </option>
-          <option value="inactive">
-            Inactive
-          </option>
-        </select>
-        <UIcon
-          name="i-lucide-chevron-right"
-          class="pointer-events-none absolute top-1/2 right-2.5 h-3 w-3 -translate-y-1/2 rotate-90 text-slate-400"
-        />
-      </div>
+        Include inactive
+      </label>
     </div>
 
     <button
       v-if="isFilterDirty"
       type="button"
       class="inline-flex h-8.5 items-center gap-1.5 self-start rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:bg-slate-50 hover:text-slate-800 cursor-pointer md:self-auto"
-      @click="emit('reset')"
+      @click="handleReset"
     >
       <UIcon
         name="i-lucide-rotate-ccw"

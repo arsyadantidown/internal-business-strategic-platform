@@ -81,6 +81,36 @@ export const PARTNER_LEGAL_DOCUMENT_TYPES = [
   'Other'
 ] as const
 
+export interface PartnerApiItem {
+  id: string
+  partner_name: string
+  is_active: boolean
+}
+
+export interface PartnerApiDetail extends PartnerApiItem {
+  projects?: Record<string, unknown>[]
+}
+
+export interface PartnerListQuery {
+  search?: string
+  include_inactive?: boolean
+}
+
+export interface PartnerCreatePayload {
+  partner_name: string
+}
+
+export interface PartnerUpdatePayload {
+  partner_name?: string
+  is_active?: boolean
+}
+
+export interface PartnerDeleteResult {
+  id: string
+  deleted: boolean
+  is_active?: boolean
+}
+
 export interface PartnerListItem {
   id: string
   partnerName: string
@@ -134,12 +164,9 @@ export interface PartnerDetail {
   cooperationProjects: PartnerCooperationProject[]
 }
 
-export type PartnerStatusFilterValue = 'active' | 'inactive' | ''
-
 export interface PartnerFilters {
   search: string
-  category: PartnerCategoryValue | ''
-  status: PartnerStatusFilterValue
+  includeInactive: boolean
 }
 
 export interface PartnerLegalDocumentFormValue {
