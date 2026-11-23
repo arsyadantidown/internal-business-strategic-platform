@@ -33,7 +33,21 @@ export const ENDPOINTS = {
   },
   PROJECTS: {
     BASE: '/api/v1/projects',
-    FILES: (projectId: string) => `/api/v1/projects/${projectId}/files`
+    IMPORT_TEMPLATE: '/api/v1/projects/import/template',
+    IMPORT_PREVIEW: '/api/v1/projects/import/preview',
+    IMPORT_CONFIRM: '/api/v1/projects/import/confirm',
+    DETAIL: (projectId: string) => `/api/v1/projects/${projectId}`,
+    FILES: (projectId: string) => `/api/v1/projects/${projectId}/files`,
+    FILE_DETAIL: (projectId: string, fileId: string) =>
+      `/api/v1/projects/${projectId}/files/${fileId}`,
+    FILE_DOWNLOAD: (projectId: string, fileId: string) =>
+      `/api/v1/projects/${projectId}/files/${fileId}/download`,
+    CUSTOMER: (projectId: string) => `/api/v1/projects/${projectId}/customer`,
+    FINANCIAL: (projectId: string) => `/api/v1/projects/${projectId}/financial`,
+    PRODUCTS: (projectId: string) => `/api/v1/projects/${projectId}/products`,
+    TECH_STACKS: (projectId: string) => `/api/v1/projects/${projectId}/tech-stacks`,
+    PARTNERS: (projectId: string) => `/api/v1/projects/${projectId}/partners`,
+    SUCCESS_METRICS: (projectId: string) => `/api/v1/projects/${projectId}/success-metrics`
   },
   PRODUCTS: {
     BASE: '/api/v1/products'

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import type { PortfolioFilterState, PortfolioOption } from '../../types/types'
+import AppYearPicker from '~/components/common/AppYearPicker.vue'
 
 import { useMasterDataStore } from '../../stores/master-data.store'
 // Opsi non-master-data tetap diambil dari file options (stacks, products, databases)
@@ -226,16 +227,10 @@ const handleReset = () => {
         </option>
       </select>
 
-      <select
+      <AppYearPicker
         v-model="filters.year"
-        :class="selectClass"
-        aria-label="Filter by year"
         @change="handleSearch"
-      >
-        <option v-for="opt in yearOptions" :key="opt.value" :value="opt.value">
-          {{ opt.label }}
-        </option>
-      </select>
+      />
     </div>
   </div>
 </template>

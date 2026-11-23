@@ -2,8 +2,7 @@
 interface Props {
   industry: string
   technologies: string[]
-  serviceType: string
-  projectType: string
+  product: string
 }
 
 defineProps<Props>()
@@ -37,13 +36,8 @@ defineProps<Props>()
       </div>
 
       <div class="flex items-center justify-between border-t border-slate-50 pt-2">
-        <span class="text-slate-400 font-medium">Service Type</span>
-        <span class="font-semibold text-slate-800">{{ serviceType }}</span>
-      </div>
-
-      <div class="flex items-center justify-between">
-        <span class="text-slate-400 font-medium">Project Type</span>
-        <span class="font-semibold text-slate-800">{{ projectType }}</span>
+        <span class="text-slate-400 font-medium">Product</span>
+        <span class="font-semibold text-slate-800">{{ product }}</span>
       </div>
     </div>
   </div>

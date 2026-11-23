@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { ProjectItem, ViewMode, PortfolioFilterState } from '../../types/types.ts'
+import { ref, watch, onMounted } from 'vue'
+import type { ProjectItem, ViewMode, PortfolioFilterState } from '../../types/types'
 import { createPortfolioFilterState } from '../../data/portfolioOptions'
+import { usePortfolioStore } from '../../stores/portofolio.store'
 
 import PortofolioHeader from './PortofolioHeader.vue'
 import PortofolioFilter from './PortofolioFilter.vue'
@@ -11,316 +12,97 @@ import PortofolioTable from './PortofolioTable.vue'
 import PortofolioPagination from './PortofolioPagination.vue'
 import PortofolioFormModal from './PortofolioFormModal.vue'
 
+const portfolioStore = usePortfolioStore()
+
 const viewMode = ref<ViewMode>('grid')
 const sortBy = ref<string>('latest')
-const currentPage = ref<number>(1)
-const pageSize = 12
-
 const activeFilters = ref<PortfolioFilterState>(createPortfolioFilterState())
 const isFormOpen = ref(false)
 const editingProject = ref<ProjectItem | null>(null)
 
-const createProject = (project: Omit<ProjectItem, 'technologies'>): ProjectItem => ({
-  ...project,
-  technologies: [project.frontendStack, project.backendStack, project.database]
-    .filter((item): item is string => Boolean(item))
-})
+// Debounce timer untuk search
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
-const dummyProjects = ref<ProjectItem[]>([
-  createProject({
-    id: '1',
-    title: 'Digital Banking Transformation',
-    client: 'ABC Bank',
-    description: 'End-to-end digital banking platform for improved customer experience.',
-    industry: 'Financial Services',
-    companySize: 'Tier 1 : Strategic/Enterprise (>1T)',
-    legalStructure: 'Private Company',
-    businessUnit: 'ITMS',
-    product: 'Bliv',
-    customerType: 'Strategic Customer',
-    productStatus: 'Ready to Sell',
-    frontendStack: 'Vue.js (Vue, Vue2, Vue3)',
-    backendStack: 'Python (Flask API, FastAPI)',
-    database: 'PostgreSQL (Postgres)',
-    status: 'Closed',
-    year: '2025',
-    image:
-      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '2 days ago'
-  }),
-  createProject({
-    id: '2',
-    title: 'Smart Manufacturing Platform',
-    client: 'PT. Manufaktur Indonesia',
-    description: 'IoT-based manufacturing monitoring and predictive maintenance platform.',
-    industry: 'Manufacturing',
-    companySize: 'Tier 2 : Growth/Valued (100B<1T)',
-    legalStructure: 'Private Company',
-    businessUnit: 'SI',
-    product: 'Semeru',
-    customerType: 'Strategic Customer',
-    productStatus: 'Ready to Sell',
-    frontendStack: 'Vue.js (Vue, Vue2, Vue3)',
-    backendStack: 'Golang',
-    database: 'TimescaleDB',
-    status: 'On Going',
-    year: '2026',
-    image:
-      'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '5 days ago'
-  }),
-  createProject({
-    id: '3',
-    title: 'Retail Analytics Platform',
-    client: 'Retail Group',
-    description: 'Analytics platform for retail business intelligence and sales optimization.',
-    industry: 'Retail and Wholesale Trade',
-    companySize: 'Tier 2 : Growth/Valued (100B<1T)',
-    legalStructure: 'Private Company',
-    businessUnit: 'CSD',
-    product: 'Bliv',
-    customerType: 'Regular Customer',
-    productStatus: 'Under Development',
-    frontendStack: 'React',
-    backendStack: 'Python (Flask API, FastAPI)',
-    database: 'ClickHouse (with CHProxy)',
-    status: 'On Going',
-    year: '2025',
-    image:
-      'https://images.unsplash.com/photo-1555421689-491a97ff2040?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '1 week ago'
-  }),
-  createProject({
-    id: '4',
-    title: 'Healthcare Management System',
-    client: 'MediCare Hospital',
-    description: 'Patient management and resource allocation system for healthcare providers.',
-    industry: 'Healthcare',
-    companySize: 'Tier 1 : Strategic/Enterprise (>1T)',
-    legalStructure: 'State-owned Enterprise',
-    businessUnit: 'ITMS',
-    product: 'Semeru',
-    customerType: 'Strategic Customer',
-    productStatus: 'Ready to Sell',
-    frontendStack: 'Vue.js (Vue, Vue2, Vue3)',
-    backendStack: 'Java (for custom NiFi components)',
-    database: 'PostgreSQL (Postgres)',
-    status: 'Closed',
-    year: '2025',
-    image:
-      'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '2 weeks ago'
-  }),
-  createProject({
-    id: '5',
-    title: 'Logistics Tracking Platform',
-    client: 'LogiTrans Indonesia',
-    description: 'Real-time shipment tracking and supply chain visibility platform.',
-    industry: 'Transportation and Logistics',
-    companySize: 'Tier 3 : Standard/Transactional (50B<100B)',
-    legalStructure: 'Private Company',
-    businessUnit: 'SI',
-    product: 'Teslakom',
-    customerType: 'Regular Customer',
-    productStatus: 'Ready to Sell',
-    frontendStack: 'Nuxt 3 (JavaScript)',
-    backendStack: 'Golang',
-    database: 'MySQL',
-    status: 'On Going',
-    year: '2026',
-    image:
-      'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '2 weeks ago'
-  }),
-  createProject({
-    id: '6',
-    title: 'Government Service Portal',
-    client: 'Kementerian Dalam Negeri',
-    description: 'Digital service portal for government administration and citizen engagement.',
-    industry: 'Government',
-    companySize: 'Tier 1 : Strategic/Enterprise (>1T)',
-    legalStructure: 'Goverment Institution',
-    businessUnit: 'ITMS',
-    product: 'Zabbix',
-    customerType: 'Strategic Customer',
-    productStatus: 'Ready to Sell',
-    frontendStack: 'Vue.js (Vue, Vue2, Vue3)',
-    backendStack: 'Python (Flask API, FastAPI)',
-    database: 'PostgreSQL (Postgres)',
-    status: 'On Going',
-    year: '2026',
-    image:
-      'https://images.unsplash.com/photo-1541872703-74c5e44368f9?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '3 weeks ago'
-  }),
-  createProject({
-    id: '7',
-    title: 'Internal ERP System',
-    client: 'Internal Use',
-    description: 'Integrated enterprise resource planning system for internal operations.',
-    industry: 'Information Technology (IT) and Software',
-    companySize: 'Tier 4 : Standard/Transactional (10B<50B)',
-    legalStructure: 'Private Company',
-    businessUnit: 'CSD',
-    product: 'Bliv',
-    customerType: 'Regular Customer',
-    productStatus: 'Under Development',
-    frontendStack: 'PHP (CI3, CI4)',
-    backendStack: 'PHP (CI3, CI4)',
-    database: 'MySQL',
-    status: 'On Proposal',
-    year: '2026',
-    image:
-      'https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '1 month ago'
-  }),
-  createProject({
-    id: '8',
-    title: 'Renewable Energy Dashboard',
-    client: 'Green Energy Corp',
-    description: 'Monitoring and analytics platform for renewable energy assets.',
-    industry: 'Renewable Energy',
-    companySize: 'Tier 2 : Growth/Valued (100B<1T)',
-    legalStructure: 'State-owned Enterprise',
-    businessUnit: 'SI',
-    product: 'Semeru',
-    customerType: 'Strategic Customer',
-    productStatus: 'Ready to Sell',
-    frontendStack: 'Flutter 3',
-    backendStack: 'Python (Flask API, FastAPI)',
-    database: 'TimescaleDB',
-    status: 'On Going',
-    year: '2025',
-    image:
-      'https://images.unsplash.com/photo-1466611653911-95081537e5b7?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '1 month ago'
-  }),
-  createProject({
-    id: '9',
-    title: 'Property Management System',
-    client: 'Properti Sejahtera',
-    description: 'Property asset management and tenant service platform.',
-    industry: 'Real Estate Technology (PropTech)',
-    companySize: 'Tier 3 : Standard/Transactional (50B<100B)',
-    legalStructure: 'Private Company',
-    businessUnit: 'ITMS',
-    product: 'Bliv',
-    customerType: 'Regular Customer',
-    productStatus: 'Ready to Sell',
-    frontendStack: 'Vue.js (Vue, Vue2, Vue3)',
-    backendStack: 'PHP (Laravel)',
-    database: 'PostgreSQL (Postgres)',
-    status: 'Closed',
-    year: '2024',
-    image:
-      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '1 month ago'
-  }),
-  createProject({
-    id: '10',
-    title: 'Education Learning Platform',
-    client: 'EduTech Indonesia',
-    description: 'Online learning platform with interactive content and assessment.',
-    industry: 'Education',
-    companySize: 'Tier 3 : Standard/Transactional (50B<100B)',
-    legalStructure: 'Private Company',
-    businessUnit: 'CSD',
-    product: 'Teslakom',
-    customerType: 'Regular Customer',
-    productStatus: 'Under Development',
-    frontendStack: 'React',
-    backendStack: 'Golang',
-    database: 'PostgreSQL (Postgres)',
-    status: 'On Going',
-    year: '2025',
-    image:
-      'https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '1 month ago'
-  }),
-  createProject({
-    id: '11',
-    title: 'Inventory Management System',
-    client: 'Supply Chain Co.',
-    description: 'Inventory tracking and warehouse operations solution.',
-    industry: 'Retail and Wholesale Trade',
-    companySize: 'Tier 4 : Standard/Transactional (10B<50B)',
-    legalStructure: 'Private Company',
-    businessUnit: 'SI',
-    product: 'Zabbix',
-    customerType: 'Regular Customer',
-    productStatus: 'On Hold',
-    frontendStack: 'PHP (CI3, CI4)',
-    backendStack: 'PHP (CI3, CI4)',
-    database: 'MySQL',
-    status: 'On Going',
-    year: '2026',
-    image:
-      'https://images.unsplash.com/photo-1553413077-190dd305871c?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '1 month ago'
-  }),
-  createProject({
-    id: '12',
-    title: 'Legacy System Migration',
-    client: 'Internal Use',
-    description: 'Migration of legacy systems to modern cloud infrastructure.',
-    industry: 'Information Technology (IT) and Software',
-    companySize: 'Tier 2 : Growth/Valued (100B<1T)',
-    legalStructure: 'Private Company',
-    businessUnit: 'ITMS',
-    product: 'Zabbix',
-    customerType: 'Strategic Customer',
-    productStatus: 'Deprecated',
-    frontendStack: 'Vue.js (Vue, Vue2, Vue3)',
-    backendStack: 'Python (Flask API, FastAPI)',
-    database: 'PostgreSQL (Postgres)',
-    status: 'Canceled',
-    year: '2024',
-    image:
-      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?q=80&w=600&auto=format&fit=crop',
-    updatedAt: '2 months ago'
-  })
-])
-
-const filteredProjects = computed(() => {
-  return dummyProjects.value.filter((project) => {
-    const keyword = activeFilters.value.search.trim().toLowerCase()
-    const matchSearch
-      = !keyword
-        || project.title.toLowerCase().includes(keyword)
-        || project.client.toLowerCase().includes(keyword)
-        || project.description.toLowerCase().includes(keyword)
-        || project.product?.toLowerCase().includes(keyword)
-
-    const matches = (value: string | undefined, filter: string) =>
-      !filter || value === filter
-
-    return (
-      matchSearch
-      && matches(project.industry, activeFilters.value.industry)
-      && matches(project.companySize, activeFilters.value.companySize)
-      && matches(project.legalStructure, activeFilters.value.legalStructure)
-      && matches(project.businessUnit, activeFilters.value.businessUnit)
-      && matches(project.product, activeFilters.value.product)
-      && matches(project.customerType, activeFilters.value.customerType)
-      && matches(project.productStatus, activeFilters.value.productStatus)
-      && matches(project.status, activeFilters.value.status)
-      && matches(project.frontendStack, activeFilters.value.frontendStack)
-      && matches(project.backendStack, activeFilters.value.backendStack)
-      && matches(project.database, activeFilters.value.database)
-      && matches(project.year, activeFilters.value.year)
-    )
-  })
-})
-
-const totalProjectsCount = computed(() => filteredProjects.value.length)
-
-const handleFilterChange = (newFilters: PortfolioFilterState) => {
-  activeFilters.value = newFilters
+// Map pilihan dropdown sortBy ke parameter 'sort' backend
+const mapSortParam = (sort: string): string => {
+  switch (sort) {
+    case 'latest':
+      return '-updated_at'
+    case 'oldest':
+      return 'updated_at'
+    case 'name_asc':
+      return 'project_name'
+    case 'name_desc':
+      return '-project_name'
+    default:
+      return '-updated_at'
+  }
 }
 
+// Fungsi fetch data ke backend sesuai filter & pagination aktif
+const loadProjects = () => {
+  const techStackId =
+    activeFilters.value.frontendStack ||
+    activeFilters.value.backendStack ||
+    activeFilters.value.database ||
+    undefined
+
+  portfolioStore.fetchProjects({
+    search: activeFilters.value.search || undefined,
+    industry_id: activeFilters.value.industry || undefined,
+    company_size_id: activeFilters.value.companySize || undefined,
+    legal_structure_id: activeFilters.value.legalStructure || undefined,
+    business_unit_id: activeFilters.value.businessUnit || undefined,
+    customer_type_id: activeFilters.value.customerType || undefined,
+    project_status_id: activeFilters.value.status || undefined,
+    tech_stack_id: techStackId,
+    year: activeFilters.value.year ? Number(activeFilters.value.year) : undefined,
+    sort: mapSortParam(sortBy.value),
+    page: portfolioStore.currentPage,
+    page_size: portfolioStore.pageSize
+  })
+}
+
+// Handler filter change dengan debounce 400ms untuk search
+const handleFilterChange = (newFilters: PortfolioFilterState) => {
+  const isSearchChanged = activeFilters.value.search !== newFilters.search
+  activeFilters.value = newFilters
+  portfolioStore.currentPage = 1 // Selalu reset ke halaman 1 saat filter berubah
+
+  if (debounceTimer) clearTimeout(debounceTimer)
+
+  if (isSearchChanged) {
+    debounceTimer = setTimeout(() => {
+      loadProjects()
+    }, 400)
+  } else {
+    loadProjects()
+  }
+}
+
+// Reset filter
 const handleResetFilter = () => {
   activeFilters.value = createPortfolioFilterState()
+  portfolioStore.currentPage = 1
+  loadProjects()
 }
+
+// Ganti halaman pagination
+const handlePageChange = (newPage: number) => {
+  portfolioStore.currentPage = newPage
+  loadProjects()
+}
+
+// Watch perubahan sort dropdown
+watch(sortBy, () => {
+  portfolioStore.currentPage = 1
+  loadProjects()
+})
+
+// Load pertama kali saat halaman dibuka
+onMounted(() => {
+  loadProjects()
+})
 
 const handleAddProject = () => {
   editingProject.value = null
@@ -332,23 +114,14 @@ const handleEditProject = (project: ProjectItem) => {
   isFormOpen.value = true
 }
 
-const handleSaveProject = (project: ProjectItem) => {
-  const index = dummyProjects.value.findIndex(item => item.id === project.id)
-
-  if (index >= 0) {
-    dummyProjects.value[index] = project
-  } else {
-    dummyProjects.value.unshift(project)
-  }
-
+const handleSaveProject = () => {
   isFormOpen.value = false
   editingProject.value = null
+  loadProjects()
 }
 
 const handleDeleteProject = (project: ProjectItem) => {
   if (!window.confirm(`Delete portfolio "${project.title}"?`)) return
-
-  dummyProjects.value = dummyProjects.value.filter(item => item.id !== project.id)
 }
 
 const handleViewDetail = (project: ProjectItem) => {
@@ -360,54 +133,76 @@ const handleViewDetail = (project: ProjectItem) => {
   <div class="space-y-6">
     <PortofolioHeader @add-project="handleAddProject" />
 
-    <PortofolioFilter
-      @filter-change="handleFilterChange"
-      @reset="handleResetFilter"
-    />
+    <PortofolioFilter @filter-change="handleFilterChange" @reset="handleResetFilter" />
 
     <PortofolioToolbar
       v-model:current-view="viewMode"
       v-model:sort-by="sortBy"
-      :total-count="totalProjectsCount"
+      :total-count="portfolioStore.totalItems"
     />
 
-    <div class="transition-all duration-200">
+    <!-- Loading Skeleton/State -->
+    <div v-if="portfolioStore.isLoading" class="flex justify-center items-center py-24">
+      <div class="flex flex-col items-center gap-3">
+        <UIcon name="i-lucide-loader-2" class="h-8 w-8 animate-spin text-blue-600" />
+        <p class="text-sm font-medium text-slate-500">Loading portfolio projects...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div
+      v-else-if="portfolioStore.errorMessage"
+      class="rounded-xl border border-red-200 bg-red-50 px-6 py-8 text-center"
+    >
+      <UIcon name="i-lucide-alert-circle" class="mx-auto h-8 w-8 text-red-500" />
+      <p class="mt-2 text-sm font-semibold text-red-800">
+        {{ portfolioStore.errorMessage }}
+      </p>
+      <button
+        type="button"
+        class="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 cursor-pointer"
+        @click="loadProjects"
+      >
+        Try Again
+      </button>
+    </div>
+
+    <!-- Data Loaded State -->
+    <div v-else class="transition-all duration-200">
       <PortofolioGrid
-        v-if="viewMode === 'grid'"
-        :projects="filteredProjects"
+        v-if="viewMode === 'grid' && portfolioStore.projects.length > 0"
+        :projects="portfolioStore.projects"
         @view-detail="handleViewDetail"
       />
 
       <PortofolioTable
-        v-else
-        :projects="filteredProjects"
+        v-else-if="viewMode === 'table' && portfolioStore.projects.length > 0"
+        :projects="portfolioStore.projects"
         @view-detail="handleViewDetail"
         @edit="handleEditProject"
         @delete="handleDeleteProject"
       />
 
+      <!-- Empty State -->
       <div
-        v-if="filteredProjects.length === 0"
+        v-if="portfolioStore.projects.length === 0"
         class="rounded-xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center"
       >
-        <UIcon
-          name="i-lucide-search-x"
-          class="mx-auto h-8 w-8 text-slate-300"
-        />
+        <UIcon name="i-lucide-search-x" class="mx-auto h-8 w-8 text-slate-300" />
         <p class="mt-3 text-sm font-semibold text-slate-700">
           No portfolio matches the selected filters.
         </p>
-        <p class="mt-1 text-xs text-slate-500">
-          Adjust or reset the filters to see more projects.
-        </p>
+        <p class="mt-1 text-xs text-slate-500">Adjust or reset the filters to see more projects.</p>
       </div>
     </div>
 
-    <div class="pt-4">
+    <!-- Server-Side Pagination -->
+    <div v-if="portfolioStore.totalItems > 0" class="pt-4">
       <PortofolioPagination
-        v-model:current-page="currentPage"
-        :total-items="totalProjectsCount"
-        :page-size="pageSize"
+        :current-page="portfolioStore.currentPage"
+        :total-items="portfolioStore.totalItems"
+        :page-size="portfolioStore.pageSize"
+        @update:current-page="handlePageChange"
       />
     </div>
 

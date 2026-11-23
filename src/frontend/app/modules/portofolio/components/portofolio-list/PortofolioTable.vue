@@ -22,48 +22,12 @@ const emit = defineEmits<{
           class="border-b border-slate-100 bg-slate-50/75 text-[11px] font-bold uppercase tracking-wider text-slate-500"
         >
           <tr>
-            <th
-              scope="col"
-              class="py-3.5 pr-4 pl-6"
-            >
-              Project
-            </th>
-            <th
-              scope="col"
-              class="px-4 py-3.5"
-            >
-              Industry
-            </th>
-            <th
-              scope="col"
-              class="px-4 py-3.5"
-            >
-              Technology
-            </th>
-            <th
-              scope="col"
-              class="px-4 py-3.5"
-            >
-              Status
-            </th>
-            <th
-              scope="col"
-              class="px-4 py-3.5"
-            >
-              Client
-            </th>
-            <th
-              scope="col"
-              class="px-4 py-3.5"
-            >
-              Updated
-            </th>
-            <th
-              scope="col"
-              class="py-3.5 pr-6 pl-4 text-right"
-            >
-              Action
-            </th>
+            <th scope="col" class="py-3.5 pr-4 pl-6">Project</th>
+            <th scope="col" class="px-4 py-3.5">Industry</th>
+            <th scope="col" class="px-4 py-3.5">Technology</th>
+            <th scope="col" class="px-4 py-3.5">Status</th>
+            <th scope="col" class="px-4 py-3.5">Client</th>
+            <th scope="col" class="px-4 py-3.5">Updated</th>
           </tr>
         </thead>
 
@@ -72,7 +36,8 @@ const emit = defineEmits<{
           <tr
             v-for="item in projects"
             :key="item.id"
-            class="transition-colors hover:bg-slate-50/80"
+            class="transition-colors hover:bg-slate-50/80 cursor-pointer"
+            @click="emit('view-detail', item)"
           >
             <!-- Project Name & Thumbnail -->
             <td class="py-3.5 pr-4 pl-6">
@@ -82,10 +47,9 @@ const emit = defineEmits<{
                   :alt="item.title"
                   class="h-10 w-12 shrink-0 rounded-lg object-cover shadow-2xs"
                   loading="lazy"
-                >
+                />
                 <span
                   class="font-bold text-slate-900 line-clamp-1 hover:text-blue-600 cursor-pointer"
-                  @click="emit('view-detail', item)"
                 >
                   {{ item.title }}
                 </span>
@@ -130,43 +94,6 @@ const emit = defineEmits<{
             </td>
 
             <!-- Action -->
-            <td class="py-3.5 pr-6 pl-4 text-right whitespace-nowrap">
-              <div class="inline-flex items-center gap-1">
-                <button
-                  type="button"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600 cursor-pointer"
-                  aria-label="View portfolio"
-                  @click="emit('view-detail', item)"
-                >
-                  <UIcon
-                    name="i-lucide-eye"
-                    class="h-4 w-4"
-                  />
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-600 cursor-pointer"
-                  aria-label="Edit portfolio"
-                  @click="emit('edit', item)"
-                >
-                  <UIcon
-                    name="i-lucide-pencil"
-                    class="h-4 w-4"
-                  />
-                </button>
-                <button
-                  type="button"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 cursor-pointer"
-                  aria-label="Delete portfolio"
-                  @click="emit('delete', item)"
-                >
-                  <UIcon
-                    name="i-lucide-trash-2"
-                    class="h-4 w-4"
-                  />
-                </button>
-              </div>
-            </td>
           </tr>
         </tbody>
       </table>

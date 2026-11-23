@@ -74,7 +74,10 @@ const filteredMedia = computed(() => {
     </div>
 
     <!-- 5 Thumbnail Gallery Grid -->
-    <div class="grid grid-cols-2 gap-3 sm:grid-cols-5">
+    <div
+      v-if="filteredMedia && filteredMedia.length > 0"
+      class="grid grid-cols-2 gap-3 sm:grid-cols-5"
+    >
       <div
         v-for="(item, idx) in filteredMedia"
         :key="idx"
@@ -99,6 +102,14 @@ const filteredMedia = computed(() => {
           </div>
         </div>
       </div>
+    </div>
+    <!-- Empty State Media -->
+    <div
+      v-else
+      class="rounded-xl border border-dashed border-slate-200 bg-slate-50/50 py-8 text-center"
+    >
+      <UIcon name="i-lucide-image-off" class="mx-auto h-7 w-7 text-slate-300" />
+      <p class="mt-2 text-xs font-medium text-slate-500">No media available in this category</p>
     </div>
   </div>
 </template>

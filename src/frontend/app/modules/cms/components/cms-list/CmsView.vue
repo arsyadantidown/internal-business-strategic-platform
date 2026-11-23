@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+
+import { usePortfolioStore } from '~/modules/portofolio/stores/portofolio.store'
+
 import type {
   CmsContent,
   CmsContentKind,
@@ -18,6 +21,7 @@ import CmsPortfolioFormModal from '../cms-form/CmsPortfolioFormModal.vue'
 import CmsPartnershipFormModal from '../cms-form/CmsPartnershipFormModal.vue'
 import CmsContentDetailModal from '../cms-detail/CmsContentDetailModal.vue'
 import CmsDeleteDialog from '../cms-delete/CmsDeleteDialog.vue'
+import CmsPortfolioImportModal from '../cms-form/CmsPortfolioImportModal.vue'
 
 interface Props {
   initialKind?: CmsContentKind
@@ -29,7 +33,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const toast = useToast()
 const router = useRouter()
-
+const portfolioStore = usePortfolioStore()
 const {
   activeKind,
   activities,
@@ -40,6 +44,7 @@ const {
   paginatedContents,
   totalResults,
   totalContents,
+  isLoading,
   createContent,
   updateContent,
   deleteContent,
@@ -55,6 +60,7 @@ const isDetailOpen = ref(false)
 const isDeleteOpen = ref(false)
 const selectedContent = ref<CmsContent | null>(null)
 const editingContent = ref<CmsContent | null>(null)
+const isImportModalOpen = ref(false)
 
 const editingPortfolio = computed(() =>
   editingContent.value?.kind === 'portfolio' ? editingContent.value : null
@@ -101,45 +107,32 @@ const saveActionPast: Record<CmsContentSaveAction, string> = {
   publish: 'published'
 }
 
-const handleSavePortfolio = (
-  values: CmsPortfolioFormValues,
-  action: CmsContentSaveAction
-) => {
-  if (editingPortfolio.value) {
-    const updated = updateContent('portfolio', editingPortfolio.value.id, values)
-
-    if (updated) {
-      toast.add({
-        title: 'Portfolio content updated',
-        description: `"${updated.title}" was ${saveActionPast[action]} successfully.`,
-        color: 'success'
-      })
-    } else {
-      toast.add({
-        title: 'Update failed',
-        description: 'The selected portfolio content could not be found.',
-        color: 'error'
-      })
-    }
-  } else {
-    const created = createContent('portfolio', values)
-    resetFilters()
-    setPage(1)
-    toast.add({
-      title: 'Portfolio content created',
-      description: `"${created.title}" was ${saveActionPast[action]} successfully.`,
-      color: 'success'
-    })
-  }
-
+// Cukup refresh list data setelah modal sukses menyimpan
+const handleSavePortfolio = () => {
+  // Ambil data terbaru dengan mempertahankan halaman & pageSize yang sedang aktif
+  portfolioStore.fetchProjects({
+    page: currentPage.value,
+    page_size: pageSize.value,
+    search: filters.value.search ? filters.value.search.trim() : undefined,
+    is_featured: filters.value.isFeatured !== undefined ? filters.value.isFeatured : undefined,
+    industry_id: filters.value.industryId || undefined,
+    project_status_id: filters.value.projectStatusId || undefined,
+    year: filters.value.year ? Number(filters.value.year) : undefined,
+    company_size_id: filters.value.companySizeId || undefined,
+    customer_type_id: filters.value.customerTypeId || undefined,
+    legal_structure_id: filters.value.legalStructureId || undefined,
+    business_unit_id: filters.value.businessUnitId || undefined,
+    tech_stack_id:
+      filters.value.databaseId ||
+      filters.value.backendStackId ||
+      filters.value.frontendStackId ||
+      undefined
+  })
   isPortfolioFormOpen.value = false
   editingContent.value = null
 }
 
-const handleSavePartnership = (
-  values: CmsPartnershipFormValues,
-  action: CmsContentSaveAction
-) => {
+const handleSavePartnership = (values: CmsPartnershipFormValues, action: CmsContentSaveAction) => {
   if (editingPartnership.value) {
     const updated = updateContent('partnership', editingPartnership.value.id, values)
 
@@ -171,9 +164,30 @@ const handleSavePartnership = (
   editingContent.value = null
 }
 
-const handleDeleteConfirm = () => {
+const handleDeleteConfirm = async () => {
   const target = selectedContent.value
-  if (target) {
+  if (!target) return
+  // 1. Jika yang dihapus adalah konten Portfolio -> Panggil Backend API via Store
+  if (target.kind === 'portfolio') {
+    try {
+      await portfolioStore.deleteProject(target.id)
+      // Hapus juga dari audit trail CMS & state lokal
+      deleteContent(target.kind, target.id)
+      toast.add({
+        title: 'Project deleted',
+        description: `"${target.title}" has been permanently removed from the database.`,
+        color: 'success'
+      })
+    } catch (error: any) {
+      toast.add({
+        title: 'Delete failed',
+        description: error?.response?.data?.message || 'Failed to delete project from server.',
+        color: 'error'
+      })
+    }
+  }
+  // 2. Jika partnership (masih lokal)
+  else {
     const deleted = deleteContent(target.kind, target.id)
     if (deleted) {
       toast.add({
@@ -181,15 +195,8 @@ const handleDeleteConfirm = () => {
         description: `"${deleted.title}" has been removed from the library.`,
         color: 'success'
       })
-    } else {
-      toast.add({
-        title: 'Delete failed',
-        description: 'The selected content could not be found.',
-        color: 'error'
-      })
     }
   }
-
   isDeleteOpen.value = false
   selectedContent.value = null
 }
@@ -227,8 +234,8 @@ const closePartnershipForm = () => {
     <CmsPageHeader
       :kind="activeKind"
       @add-content="openCreate"
+      @import-content="isImportModalOpen = true"
     />
-
     <CmsStats :stats="stats" />
 
     <CmsRecentActivity :activities="activities" />
@@ -241,6 +248,7 @@ const closePartnershipForm = () => {
       :total-contents="totalContents"
       :current-page="currentPage"
       :page-size="pageSize"
+      :is-loading="isLoading"
       @update:filters="handleFilters"
       @update:current-page="setPage"
       @update:page-size="setPageSize"
@@ -262,6 +270,12 @@ const closePartnershipForm = () => {
       :content="editingPartnership"
       @close="closePartnershipForm"
       @save="handleSavePartnership"
+    />
+    <!-- Modal Import Projects -->
+    <CmsPortfolioImportModal
+      :is-open="isImportModalOpen"
+      @close="isImportModalOpen = false"
+      @success="portfolioStore.fetchProjects()"
     />
 
     <CmsContentDetailModal

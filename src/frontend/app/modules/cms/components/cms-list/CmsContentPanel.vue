@@ -12,6 +12,7 @@ interface Props {
   totalContents: number
   currentPage: number
   pageSize: number
+  isLoading?: boolean
 }
 
 defineProps<Props>()
@@ -38,6 +39,7 @@ const emit = defineEmits<{
     <CmsTable
       :kind="kind"
       :contents="contents"
+      :is-loading="isLoading"
       @view="emit('view', $event)"
       @edit="emit('edit', $event)"
       @delete="emit('delete', $event)"

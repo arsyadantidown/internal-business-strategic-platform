@@ -259,7 +259,20 @@ export const cmsVisibilityFilterOptions: CmsFilterOption[] = cmsVisibilityOption
 
 export const createCmsFilters = (): CmsFilters => ({
   search: '',
-  status: ''
+  status: '',
+  isFeatured: true,
+  industryId: '',
+  projectStatusId: '',
+  year: '',
+  companySizeId: '',
+  customerName: '',
+  customerLocation: '',
+  legalStructureId: '',
+  businessUnitId: '',
+  customerTypeId: '',
+  frontendStackId: '',
+  backendStackId: '',
+  databaseId: ''
 })
 
 type PortfolioSeed = Pick<CmsPortfolioContent, 'id' | 'title' | 'summary' | 'client'>

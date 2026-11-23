@@ -143,6 +143,19 @@ export interface CmsActivity {
 export interface CmsFilters {
   search: string
   status: string
+  isFeatured: boolean
+  industryId: string
+  projectStatusId: string
+  year: string
+  companySizeId: string
+  customerName: string
+  customerLocation: string
+  legalStructureId: string
+  businessUnitId: string
+  customerTypeId: string
+  frontendStackId: string
+  backendStackId: string
+  databaseId: string
 }
 
 export interface CmsFilterOption {
