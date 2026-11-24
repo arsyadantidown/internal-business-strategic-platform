@@ -7,7 +7,8 @@ import type {
   PartnerFilters,
   PartnerLegalDocument,
   PartnerListItem,
-  PartnerUpdatePayload
+  PartnerUpdatePayload,
+  PartnerCooperationProject
 } from '../types/partner.types'
 
 interface ApiEnvelope<T> {
@@ -21,14 +22,38 @@ interface PartnerErrorShape {
   response?: { data?: unknown }
 }
 
-const readText = (value: unknown): string =>
-  typeof value === 'string' ? value : ''
+const readText = (value: unknown): string => (typeof value === 'string' ? value : '')
 
 const readNullableText = (value: unknown): string | null =>
   typeof value === 'string' && value !== '' ? value : null
 
 const readNumber = (value: unknown): number | null =>
   typeof value === 'number' && Number.isFinite(value) ? value : null
+
+const readTechStackList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((item) => {
+      if (typeof item === 'string') return item.trim()
+      if (typeof item === 'object' && item !== null && 'name' in item) {
+        return typeof (item as { name: unknown }).name === 'string'
+          ? (item as { name: string }).name.trim()
+          : ''
+      }
+      return ''
+    })
+    .filter(Boolean)
+}
+
+const readTechStacks = (value: unknown): PartnerProjectTechStack => {
+  if (typeof value !== 'object' || value === null) return {}
+  const raw = value as Record<string, unknown>
+  return {
+    frontend: readTechStackList(raw.frontend),
+    backend: readTechStackList(raw.backend),
+    data_storage: readTechStackList(raw.data_storage)
+  }
+}
 
 const readStringList = (value: unknown): string[] =>
   Array.isArray(value)
@@ -40,7 +65,7 @@ const readLegalDocuments = (value: unknown): PartnerLegalDocument[] => {
 
   return value
     .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
-    .map(item => ({
+    .map((item) => ({
       id: readText(item.id),
       documentName: readText(item.document_name),
       documentType: readText(item.document_type),
@@ -49,7 +74,7 @@ const readLegalDocuments = (value: unknown): PartnerLegalDocument[] => {
       expiresAt: readNullableText(item.expires_at),
       fileUrl: readNullableText(item.file_url)
     }))
-    .filter(item => item.id !== '' || item.documentName !== '')
+    .filter((item) => item.id !== '' || item.documentName !== '')
 }
 
 const readProjectStatusName = (value: unknown): string | null => {
@@ -65,18 +90,31 @@ const normalizeListItem = (raw: Record<string, unknown>): PartnerListItem => ({
   lifecycleStatus: null
 })
 
-const normalizeCooperationProject = (raw: Record<string, unknown>) => ({
+const normalizeCooperationProject = (raw: Record<string, unknown>): PartnerCooperationProject => ({
   id: readText(raw.id),
   projectCode: readText(raw.project_code),
   projectName: readText(raw.project_name),
   year: readNumber(raw.year) ?? 0,
+  projectObjective: readNullableText(raw.project_objective),
   customerName: readNullableText(raw.customer_name),
-  partnerRole: readText(raw.partner_role),
+  industry: readNullableText(raw.industry),
+  partnerRole: readText(raw.partner_role) || 'Partner',
   partnerContribution: readNullableText(raw.partner_contribution),
   projectStatusName: readProjectStatusName(raw.project_status),
+  projectStatusCode:
+    typeof raw.project_status === 'object' && raw.project_status !== null
+      ? readNullableText((raw.project_status as Record<string, unknown>).code)
+      : null,
+  contractName: readNullableText(raw.contract_name),
+  contractNumber: readNullableText(raw.contract_number),
   startDate: readText(raw.start_date).slice(0, 10),
   endDate: readText(raw.end_date).slice(0, 10),
-  progressPercent: readNumber(raw.progress_percent)
+  progressPercent: readNumber(raw.progress_percent),
+  remainingDays: readNumber(raw.remaining_days),
+  isFeatured: raw.is_featured === true,
+  coverImageUrl: readNullableText(raw.cover_image_url),
+  valueBeforeTax: readNumber(raw.value_before_tax),
+  techStacks: readTechStacks(raw.tech_stacks) // <-- Pakai readTechStacks di sini
 })
 
 const normalizeDetail = (raw: Record<string, unknown>): PartnerDetail => ({
@@ -97,26 +135,30 @@ const normalizeDetail = (raw: Record<string, unknown>): PartnerDetail => ({
   legalDocuments: readLegalDocuments(raw.legal_documents),
   cooperationProjects: Array.isArray(raw.projects)
     ? raw.projects
-        .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+        .filter(
+          (item): item is Record<string, unknown> => typeof item === 'object' && item !== null
+        )
         .map(normalizeCooperationProject)
-        .filter(item => item.id !== '')
+        .filter((item) => item.id !== '')
     : []
 })
 
 const readRows = (data: unknown): Record<string, unknown>[] =>
   Array.isArray(data)
-    ? data.filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
+    ? data.filter(
+        (item): item is Record<string, unknown> => typeof item === 'object' && item !== null
+      )
     : []
 
 const readObject = (data: unknown): Record<string, unknown> =>
-  typeof data === 'object' && data !== null ? data as Record<string, unknown> : {}
+  typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : {}
 
 const readMessageList = (value: unknown): string[] => {
   if (typeof value === 'string') return [value]
-  if (Array.isArray(value)) return value.flatMap(item => readMessageList(item))
+  if (Array.isArray(value)) return value.flatMap((item) => readMessageList(item))
   if (typeof value === 'object' && value !== null) {
     return Object.entries(value).flatMap(([field, item]) =>
-      readMessageList(item).map(message => `${field}: ${message}`)
+      readMessageList(item).map((message) => `${field}: ${message}`)
     )
   }
   return []
@@ -126,7 +168,7 @@ const readErrorData = (error: unknown): Record<string, unknown> | null => {
   if (typeof error !== 'object' || error === null) return null
   const source = error as PartnerErrorShape
   const data = source.response?.data ?? source.data
-  return typeof data === 'object' && data !== null ? data as Record<string, unknown> : null
+  return typeof data === 'object' && data !== null ? (data as Record<string, unknown>) : null
 }
 
 export const getPartnerErrorMessage = (error: unknown): string => {
@@ -155,7 +197,7 @@ export const partnerApi = {
 
     return readRows(response.data?.data)
       .map(normalizeListItem)
-      .filter(item => item.id !== '')
+      .filter((item) => item.id !== '')
   },
 
   async getDetail(partnerId: string): Promise<PartnerDetail> {

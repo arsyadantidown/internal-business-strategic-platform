@@ -34,7 +34,12 @@ export const PARTNER_CATEGORIES: readonly PartnerCategoryMeta[] = [
   }
 ]
 
-export type PartnerLifecycleStatusValue = 'draft' | 'active' | 'under_review' | 'expired' | 'terminated'
+export type PartnerLifecycleStatusValue =
+  | 'draft'
+  | 'active'
+  | 'under_review'
+  | 'expired'
+  | 'terminated'
 
 export interface PartnerLifecycleStatusMeta {
   value: PartnerLifecycleStatusValue
@@ -119,18 +124,33 @@ export interface PartnerListItem {
   lifecycleStatus: PartnerLifecycleStatusValue | null
 }
 
+export interface PartnerProjectTechStack {
+  frontend?: string[]
+  backend?: string[]
+  data_storage?: string[]
+}
 export interface PartnerCooperationProject {
   id: string
   projectCode: string
   projectName: string
   year: number
+  projectObjective: string | null
   customerName: string | null
+  industry: string | null
   partnerRole: string
   partnerContribution: string | null
   projectStatusName: string | null
+  projectStatusCode: string | null
+  contractName: string | null
+  contractNumber: string | null
   startDate: string
   endDate: string
   progressPercent: number | null
+  remainingDays: number | null
+  isFeatured: boolean
+  coverImageUrl: string | null
+  valueBeforeTax: number | null
+  techStacks: PartnerProjectTechStack
 }
 
 export interface PartnerLegalDocument {
