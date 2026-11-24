@@ -1,38 +1,33 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { PARTNER_LIFECYCLE_STATUSES } from '../../types/partner.types'
-import type { PartnerLifecycleStatusValue } from '../../types/partner.types'
 
 interface Props {
   isActive: boolean
-  lifecycleStatus: PartnerLifecycleStatusValue | null
 }
 
 const props = defineProps<Props>()
 
-const meta = computed(() => {
-  if (props.lifecycleStatus) {
-    return PARTNER_LIFECYCLE_STATUSES.find(status => status.value === props.lifecycleStatus) ?? null
-  }
-
+const badgeConfig = computed(() => {
   return props.isActive
     ? {
         label: 'Active',
-        chipClass: 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        badgeClass: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
+        dotClass: 'bg-emerald-500'
       }
     : {
         label: 'Inactive',
-        chipClass: 'border-slate-200 bg-slate-100 text-slate-500'
+        badgeClass: 'bg-slate-100 text-slate-500 border border-slate-200',
+        dotClass: 'bg-slate-400'
       }
 })
 </script>
 
 <template>
   <span
-    class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap"
-    :class="meta?.chipClass"
+    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-nowrap"
+    :class="badgeConfig.badgeClass"
   >
-    <span class="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-    {{ meta?.label }}
+    <span class="h-1.5 w-1.5 rounded-full" :class="badgeConfig.dotClass" />
+    <span>{{ badgeConfig.label }}</span>
   </span>
 </template>

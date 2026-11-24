@@ -35,10 +35,10 @@ onBeforeUnmount(() => {
   if (debounceTimer) clearTimeout(debounceTimer)
 })
 
-const handleIncludeInactiveChange = (event: Event) => {
+const setIncludeInactive = (val: boolean) => {
   emit('update', {
     ...props.filters,
-    includeInactive: (event.target as HTMLInputElement).checked
+    includeInactive: val
   })
 }
 
@@ -50,43 +50,63 @@ const handleReset = () => {
 </script>
 
 <template>
-  <div class="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
-    <div class="flex flex-col gap-2.5 md:flex-row md:flex-wrap md:items-center">
-      <div class="relative w-full md:w-64">
-        <UIcon
-          name="i-lucide-search"
-          class="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-slate-400"
-        />
-        <input
-          v-model="searchInput"
-          type="text"
-          maxlength="200"
-          placeholder="Search partner name..."
-          class="h-8.5 w-full rounded-lg border border-slate-200 bg-white pr-3 pl-9 text-xs text-slate-700 shadow-xs transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none"
-        >
-      </div>
-
-      <label class="inline-flex h-8.5 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 shadow-xs transition-colors hover:bg-slate-50">
-        <input
-          type="checkbox"
-          class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500/50"
-          :checked="filters.includeInactive"
-          @change="handleIncludeInactiveChange"
-        >
-        Include inactive
-      </label>
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-start">
+    <!-- Search Input -->
+    <div class="relative w-full sm:w-80">
+      <UIcon
+        name="i-lucide-search"
+        class="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
+      />
+      <input
+        v-model="searchInput"
+        type="text"
+        maxlength="200"
+        placeholder="Search partner name..."
+        class="h-9 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-xs text-slate-700 shadow-2xs transition-colors placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/50 focus:outline-none"
+      />
     </div>
 
+    <!-- Segmented Toggle Include Inactive (No / Yes) -->
+    <div
+      class="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-200/90 bg-white px-3 py-1 shadow-2xs"
+    >
+      <span class="text-xs font-medium text-slate-600 select-none">Include Inactive</span>
+      <div class="flex items-center rounded-lg bg-slate-100 p-0.5 text-xs font-semibold">
+        <button
+          type="button"
+          class="rounded-md px-2.5 py-0.5 transition-all cursor-pointer select-none"
+          :class="
+            !filters.includeInactive
+              ? 'bg-blue-600 text-white shadow-2xs'
+              : 'text-slate-500 hover:text-slate-800'
+          "
+          @click="setIncludeInactive(false)"
+        >
+          No
+        </button>
+        <button
+          type="button"
+          class="rounded-md px-2.5 py-0.5 transition-all cursor-pointer select-none"
+          :class="
+            filters.includeInactive
+              ? 'bg-blue-600 text-white shadow-2xs'
+              : 'text-slate-500 hover:text-slate-800'
+          "
+          @click="setIncludeInactive(true)"
+        >
+          Yes
+        </button>
+      </div>
+    </div>
+
+    <!-- Reset Button (jika search terisi) -->
     <button
       v-if="isFilterDirty"
       type="button"
-      class="inline-flex h-8.5 items-center gap-1.5 self-start rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-xs transition-all hover:bg-slate-50 hover:text-slate-800 cursor-pointer md:self-auto"
+      class="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 shadow-2xs transition-all hover:bg-slate-50 hover:text-slate-800 cursor-pointer"
       @click="handleReset"
     >
-      <UIcon
-        name="i-lucide-rotate-ccw"
-        class="h-3.5 w-3.5"
-      />
+      <UIcon name="i-lucide-rotate-ccw" class="h-3.5 w-3.5" />
       <span>Reset</span>
     </button>
   </div>

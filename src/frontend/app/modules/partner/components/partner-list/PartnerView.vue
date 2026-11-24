@@ -16,6 +16,7 @@ const { items, isLoading, errorMessage, filters, isFilterDirty } = storeToRefs(p
 
 const deleteTarget = ref<PartnerListItem | null>(null)
 const isDeleteOpen = ref(false)
+const togglingId = ref<string | null>(null)
 
 const navigateToDetail = (item: PartnerListItem) => {
   router.push({ query: { mode: 'detail', id: item.id } })
@@ -65,6 +66,30 @@ const confirmDelete = async () => {
   }
 }
 
+// Handler baru untuk Deactivate / Activate dari Table Utama
+const handleToggleActive = async (item: PartnerListItem) => {
+  togglingId.value = item.id
+  const nextState = !item.isActive
+
+  try {
+    await partnerStore.setPartnerActive(item.id, nextState)
+
+    toast.add({
+      title: nextState ? 'Partner activated' : 'Partner deactivated',
+      description: `"${item.partnerName}" is now ${nextState ? 'active' : 'inactive'}.`,
+      color: 'success'
+    })
+  } catch (error) {
+    toast.add({
+      title: 'Action failed',
+      description: getPartnerErrorMessage(error),
+      color: 'error'
+    })
+  } finally {
+    togglingId.value = null
+  }
+}
+
 onMounted(() => {
   partnerStore.fetchPartners()
 })
@@ -87,9 +112,11 @@ onMounted(() => {
       :is-loading="isLoading"
       :load-error="errorMessage ?? ''"
       :is-filter-dirty="isFilterDirty"
+      :toggling-id="togglingId"
       @view="navigateToDetail"
       @edit="navigateToEdit"
       @delete="openDelete"
+      @toggle-active="handleToggleActive"
       @retry="partnerStore.fetchPartners"
       @add="navigateToAdd"
     />
