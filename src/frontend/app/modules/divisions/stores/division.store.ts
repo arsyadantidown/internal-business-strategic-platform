@@ -7,12 +7,7 @@ export const useDivisionStore = defineStore('division', () => {
   const divisions = ref<DivisionItem[]>([])
   const isLoading = ref<boolean>(false)
 
-  const fetchDivisions = async (force = false) => {
-    // In-memory cache: jika data sudah ada dan tidak dipaksa fetch ulang
-    if (divisions.value.length > 0 && !force) {
-      return divisions.value
-    }
-
+  const fetchDivisions = async (_force = false) => {
     isLoading.value = true
     try {
       const res = await divisionApi.getAll()

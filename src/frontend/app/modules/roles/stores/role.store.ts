@@ -98,9 +98,7 @@ export const useRoleStore = defineStore('role', () => {
     }
   }
 
-  const fetchRoles = async (force = false) => {
-    if (roles.value.length > 0 && !force) return roles.value
-
+  const fetchRoles = async (_force = false) => {
     isLoading.value = true
     try {
       const res = await roleApi.getAll()

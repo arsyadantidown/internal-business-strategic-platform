@@ -80,9 +80,7 @@ export const useMasterDataStore = defineStore('masterData', () => {
   })
 
   // Action untuk memuat semua 7 master data sekaligus
-  const fetchAllMasterData = async (force = false) => {
-    if (isLoaded.value && !force) return
-
+  const fetchAllMasterData = async (_force = false) => {
     isLoading.value = true
     try {
       const [

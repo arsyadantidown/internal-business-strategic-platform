@@ -12,7 +12,7 @@ const masterDataStore = useMasterDataStore()
 
 // Panggil fetchAllMasterData saat komponen dimuat
 onMounted(() => {
-  masterDataStore.fetchAllMasterData()
+  masterDataStore.fetchAllMasterData(true)
 })
 
 const emit = defineEmits<{
@@ -55,14 +55,6 @@ const backendStackOptions = computed(() =>
   withAll('All Backend Stacks', masterDataStore.backendStackOptions)
 )
 const databaseOptions = computed(() => withAll('All Databases', masterDataStore.databaseOptions))
-
-const yearOptions = [
-  { label: 'All Years', value: '' },
-  { label: '2026', value: '2026' },
-  { label: '2025', value: '2025' },
-  { label: '2024', value: '2024' },
-  { label: '2023', value: '2023' }
-]
 
 const selectClass =
   'h-9.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 transition-colors focus:border-blue-500 focus:outline-none cursor-pointer'
@@ -227,10 +219,7 @@ const handleReset = () => {
         </option>
       </select>
 
-      <AppYearPicker
-        v-model="filters.year"
-        @change="handleSearch"
-      />
+      <AppYearPicker v-model="filters.year" @change="handleSearch" />
     </div>
   </div>
 </template>
