@@ -19,7 +19,7 @@ const emit = defineEmits<{
     class="group flex flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
   >
     <!-- Card Image Header & Floating Badges -->
-    <div class="relative h-44 w-full overflow-hidden bg-slate-100">
+    <div class="relative h-36 w-full overflow-hidden bg-slate-100">
       <img
         :src="project.cover_image_url || DUMMY_IMAGE"
         :alt="project.title"
@@ -41,10 +41,10 @@ const emit = defineEmits<{
     </div>
 
     <!-- Card Content Body -->
-    <div class="flex flex-1 flex-col p-4.5">
+    <div class="flex flex-1 flex-col p-3.5">
       <!-- Title -->
       <h3
-        class="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2"
+        class="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2"
       >
         {{ project.title }}
       </h3>
