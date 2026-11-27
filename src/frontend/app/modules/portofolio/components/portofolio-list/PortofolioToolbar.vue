@@ -38,7 +38,7 @@ const sortOptions = [
           class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer"
           :class="[
             currentView === 'grid'
-              ? 'bg-[#0B132B] text-white shadow-xs'
+              ? 'bg-blue-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900'
           ]"
           @click="emit('update:currentView', 'grid')"
@@ -52,7 +52,7 @@ const sortOptions = [
           class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-all cursor-pointer"
           :class="[
             currentView === 'table'
-              ? 'bg-[#0B132B] text-white shadow-xs'
+              ? 'bg-blue-600 text-white shadow-xs'
               : 'text-slate-600 hover:text-slate-900'
           ]"
           @click="emit('update:currentView', 'table')"

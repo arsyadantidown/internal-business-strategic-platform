@@ -18,7 +18,7 @@ const emit = defineEmits<{
   <div
     class="group flex flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-xs transition-all duration-200 hover:-translate-y-1 hover:shadow-md"
   >
-    <!-- Card Image Header & Floating Status Badge -->
+    <!-- Card Image Header & Floating Badges -->
     <div class="relative h-44 w-full overflow-hidden bg-slate-100">
       <img
         :src="project.cover_image_url || DUMMY_IMAGE"
@@ -26,9 +26,17 @@ const emit = defineEmits<{
         class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         loading="lazy"
       />
-      <!-- Floating Badge -->
+      <!-- Floating Status Badge -->
       <div class="absolute top-3 left-3">
         <PortofolioStatusBadge :status="project.status" />
+      </div>
+
+      <!-- Floating Year Badge -->
+      <div
+        v-if="project.year"
+        class="absolute top-3 right-3 rounded-full bg-slate-900/75 px-2.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur-xs"
+      >
+        Year {{ project.year }}
       </div>
     </div>
 
@@ -36,20 +44,33 @@ const emit = defineEmits<{
     <div class="flex flex-1 flex-col p-4.5">
       <!-- Title -->
       <h3
-        class="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-1"
+        class="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2"
       >
         {{ project.title }}
       </h3>
 
-      <!-- Industry & Tech Badges -->
+      <!-- Industry & Company Size Badges -->
       <div class="mt-2.5 flex flex-wrap gap-1.5">
-        <span class="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+        <span
+          v-if="project.industry"
+          class="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+        >
           {{ project.industry }}
         </span>
         <span
+          v-if="project.companySize"
+          class="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+        >
+          {{ project.companySize }}
+        </span>
+      </div>
+
+      <!-- Tech Stack Badges -->
+      <div v-if="project.technologies?.length" class="mt-1.5 flex flex-wrap gap-1.5">
+        <span
           v-for="tech in project.technologies"
           :key="tech"
-          class="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+          class="rounded-md border border-blue-100/80 bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-600"
         >
           {{ tech }}
         </span>
@@ -62,7 +83,7 @@ const emit = defineEmits<{
 
       <!-- Footer Info -->
       <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-        <span class="text-slate-400 font-medium"> Updated {{ project.updatedAt }} </span>
+        <span class="font-medium text-slate-400">Updated {{ project.updatedAt }}</span>
 
         <button
           type="button"

@@ -66,7 +66,7 @@ const visiblePages = computed(() => {
     <p class="text-xs font-medium text-slate-500">
       Showing <span class="font-semibold text-slate-700">{{ startItem }}</span> to
       <span class="font-semibold text-slate-700">{{ endItem }}</span> of
-      <span class="font-semibold text-slate-700">{{ totalItems }}</span> projects
+      <span class="font-semibold text-slate-700">{{ totalItems }}</span> entries
     </p>
 
     <!-- Tombol Pagination Sisi Kanan -->
@@ -74,12 +74,12 @@ const visiblePages = computed(() => {
       <!-- Tombol Prev -->
       <button
         type="button"
-        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        class="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         :disabled="currentPage <= 1"
         aria-label="Previous Page"
         @click="goToPage(currentPage - 1)"
       >
-        <UIcon name="i-lucide-chevron-left" class="h-4 w-4" />
+        Previous
       </button>
 
       <!-- Daftar Tombol Halaman & Titik-titik -->
@@ -110,12 +110,12 @@ const visiblePages = computed(() => {
       <!-- Tombol Next -->
       <button
         type="button"
-        class="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+        class="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
         :disabled="currentPage >= totalPages"
         aria-label="Next Page"
         @click="goToPage(currentPage + 1)"
       >
-        <UIcon name="i-lucide-chevron-right" class="h-4 w-4" />
+        Next
       </button>
     </div>
   </div>
