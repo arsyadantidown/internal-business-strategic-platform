@@ -49,6 +49,8 @@ const loadProjects = () => {
 
   portfolioStore.fetchProjects({
     search: activeFilters.value.search || undefined,
+    customer_name: activeFilters.value.customerName || undefined,
+    customer_location: activeFilters.value.customerLocation || undefined,
     industry_id: activeFilters.value.industry || undefined,
     company_size_id: activeFilters.value.companySize || undefined,
     legal_structure_id: activeFilters.value.legalStructure || undefined,

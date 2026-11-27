@@ -130,5 +130,7 @@ export const createPortfolioFilterState = (): PortfolioFilterState => ({
   frontendStack: '',
   backendStack: '',
   database: '',
-  year: ''
+  year: '',
+  customerName: '',
+  customerLocation: ''
 })

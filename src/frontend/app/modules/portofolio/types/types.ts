@@ -44,6 +44,10 @@ export interface PortfolioFilterState {
   backendStack: string
   database: string
   year: string
+  customerName: string
+  customerLocation: string
+  customerName: string // <-- tambah ini
+  customerLocation: string // <-- tambah ini
 }
 
 // --- Tambahan Khusus untuk Halaman Detail ---
