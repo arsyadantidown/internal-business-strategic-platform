@@ -24,7 +24,7 @@ export const usePortfolioStore = defineStore('portfolio', () => {
 
   // Pagination states
   const currentPage = ref<number>(1)
-  const pageSize = ref<number>(12)
+  const pageSize = ref<number>(6)
   const totalItems = ref<number>(0)
   const totalPages = ref<number>(1)
 

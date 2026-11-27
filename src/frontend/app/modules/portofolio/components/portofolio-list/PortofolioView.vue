@@ -14,7 +14,7 @@ import PortofolioFormModal from './PortofolioFormModal.vue'
 
 const portfolioStore = usePortfolioStore()
 
-const viewMode = ref<ViewMode>('grid')
+const viewMode = useState<ViewMode>('portfolio-view-mode', () => 'grid')
 const sortBy = ref<string>('latest')
 const activeFilters = ref<PortfolioFilterState>(createPortfolioFilterState())
 const isFormOpen = ref(false)
